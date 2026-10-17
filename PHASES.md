@@ -6,14 +6,19 @@ Spec: `PRD.md` · Screens: `FRONTEND.md` · Team doc: https://claude.ai/code/art
 Escrow where neither side can cheat: both sign the checklist, PayPal holds the money, code + Claude vision check the work with evidence, and the verdict binds both sides unless appealed.
 
 Stack: Next.js + SQLite, Claude (Anthropic SDK, vision), `sharp` for image checks, PayPal REST sandbox, AG Grid, Render.
-Prize targets: Most Impactful, Best Use of PayPal + AI, AG Grid sponsor prize.
+Prize targets: Most Impactful **or** Best Use of PayPal + AI (max one Honorable Mention), plus one sponsor prize (AG Grid; Render as a backup).
+Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties go to Tech first. Judges may score from the video alone.
 
 ---
 
 ## Phase 0: Validate (Oct 17–19)
-- [ ] Read the Devpost page directly: confirm criteria, prizes, submission rules (agents couldn't fetch it)
-- [ ] Sandbox: how many reauthorizes are allowed?
-- [ ] Sandbox: Venmo payout field (`VENMO` vs `Venmo`), US phone receiver
+- [x] Read the Devpost rules (Oct 17). Findings:
+  - Win at most 1 Grand/Honorable Mention + 1 sponsor prize
+  - Hosted demo must stay up, free, until judging ends **Dec 15**. Render free tier sleeps and wipes local disk → SQLite needs a persistent disk or a reseed on boot; cap the Anthropic spend
+  - Repo public, license file shown in the About section, README with sandbox logins
+  - Video < 3 min on YouTube; no copyrighted music or third-party trademarks without permission
+- [x] Sandbox: reauthorize is allowed **once**, day 4–29 only, on the real clock (day 0 → `422 REAUTHORIZATION_TOO_SOON`). The demo can't trigger it live, so the simulated clock has to fake that step
+- [x] Sandbox: `VENMO` is a valid `recipient_wallet`, but the sandbox rejects it (`Recipient wallet not supported in sandbox`). `PAYPAL` works. Demo pays out to a PayPal sandbox account; Venmo stays a one-field production path
 - [ ] Add `ANTHROPIC_API_KEY` to `.env`
 - [ ] Decide the final name
 
@@ -26,11 +31,11 @@ Prize targets: Most Impactful, Best Use of PayPal + AI, AG Grid sponsor prize.
 - [ ] Capture the earned share with `final_capture`, remainder returned
 - [ ] Void (0%, cancel, missed deadline)
 - [ ] Reauthorize from day 4; store the new authorization ID
-- [x] Payouts (works in `phase1.mjs`) → add `recipient_wallet: VENMO`
+- [x] Payouts (works in `phase1.mjs`); `recipient_wallet: VENMO` is production-only (sandbox rejects it)
 - [ ] Webhook endpoint + signature check; events from PRD 8.3
 - [ ] Simulated clock for demo mode (72 h → 60 s, hold days)
 
-**Exit:** one script runs hold → reauthorize → partial capture → Venmo payout, and hold → void; webhooks land.
+**Exit:** one script runs hold → reauthorize → partial capture → PayPal payout, and hold → void; webhooks land.
 
 ---
 
@@ -65,7 +70,9 @@ Prize targets: Most Impactful, Best Use of PayPal + AI, AG Grid sponsor prize.
 - [ ] *(Stretch)* v1 → v2 visual diff: fixed items confirmed, no regressions
 - [ ] *(Stretch)* KERNEL browser agent for website deliverables
 - [ ] Record the demo (< 3 min, YouTube)
-- [ ] README: setup, sandbox logins, architecture, limits, multiparty as production path; open-source license
+- [ ] README: setup, sandbox logins, architecture, limits, multiparty as production path
+- [ ] MIT `LICENSE` file; check it shows in the GitHub About section
+- [ ] Keep the Render demo up through Dec 15 (persistent disk or reseed, API spend cap)
 - [ ] Devpost write-up
 - [ ] **Nov 9: code freeze**
 - [ ] **Nov 11: submit**
@@ -79,7 +86,7 @@ Prize targets: Most Impactful, Best Use of PayPal + AI, AG Grid sponsor prize.
 | 1:00 | Maya uploads v1; the client only sees a watermarked preview |
 | 1:15 | Verdict: 2 of 5 fail, with the 32 px render as proof; client requests changes on those items |
 | 1:45 | v2 passes. Client tries to release 0% — **blocked**; only "appeal" is offered |
-| 2:15 | Window closes → capture → Maya's Venmo +$380; originals unlock for the client |
+| 2:15 | Window closes → capture → Maya's PayPal +$380; originals unlock for the client |
 | 2:40 | Audit trail in AG Grid: every check, every PayPal ID |
 
 ---

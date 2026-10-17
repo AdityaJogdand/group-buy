@@ -83,7 +83,7 @@ DRAFT ─► PROPOSED ─► SIGNED ─► FUNDED ─► SUBMITTED ─► VERIFY
 |---|---|
 | Fund | Orders v2 `intent: AUTHORIZE` → `/authorize` |
 | Keep hold alive | `POST /v2/payments/authorizations/{id}/reauthorize` from day 4 (3-day honor, 29-day validity); store the new ID |
-| Settle | `/capture` with `final_capture: true` for the earned share → Payouts with `recipient_wallet: VENMO` (or email), minus 5% fee |
+| Settle | `/capture` with `final_capture: true` for the earned share → Payouts to email (`recipient_wallet: VENMO` in production only; the sandbox rejects it), minus 5% fee |
 | Void | `/void` at 0%, on cancel, or when the deadline passes |
 | Webhooks | `PAYMENT.AUTHORIZATION.VOIDED`, `PAYMENT.CAPTURE.COMPLETED/DECLINED`, `PAYMENT.PAYOUTS-ITEM.SUCCEEDED/UNCLAIMED/RETURNED/FAILED`; verified via `/v1/notifications/verify-webhook-signature` |
 | Agent read-only | PayPal Agent Toolkit lookup tools so the audit trail shows the agent confirming PayPal state |
@@ -121,7 +121,7 @@ events      id, contract_id, at, actor, type, data_json
 | Third escrow entry; innovation scored low | Lead with fairness + creative work; the 0%-blocked moment |
 | Behind Holdfast on polish | Hosted demo by Nov 4; one polished flow over many features |
 | AI wrong call | Evidence per item; second pass; `unsure` → reviewer; appeal |
-| Reauthorize count unclear in docs | Test in sandbox Phase 0; fallback capture-and-hold |
+| Reauthorize: once, day 4–29, real clock (sandbox-tested Oct 17) | Demo fakes it via the simulated clock; real call runs in the background job |
 | Judging criteria unconfirmed (Devpost blocked our fetch) | Team reads Devpost directly in Phase 0 |
 
 ## 12. Open questions

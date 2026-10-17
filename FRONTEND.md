@@ -5,7 +5,7 @@ Spec: `PRD.md` · Dates: `PHASES.md` (Phase 3, Oct 31–Nov 4)
 ## Principles
 - **Demo-first.** Each screen reads clearly in a screen recording: big status, one primary action.
 - **One shared contract page.** A role switcher (Client · Freelancer · Reviewer) changes which actions appear.
-- **Where the money is, always visible.** A money timeline at the top: *Not funded → Held (2d 14h left) → Captured → Paid to Venmo*.
+- **Where the money is, always visible.** A money timeline at the top: *Not funded → Held (2d 14h left) → Captured → Paid to PayPal*.
 - **Fairness is visible.** Both signatures, the review-window countdown and "appeal" are always on screen when relevant.
 - No login, no settings.
 
@@ -34,7 +34,7 @@ Role stored in `localStorage` (try/catch, default Client).
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │ Maya · Ember logo · $400                                         │
-│ Money: [Not funded]──[HELD · 2d 14h]──[Captured]──[Paid → Venmo] │  ← live from webhooks
+│ Money: [Not funded]──[HELD · 2d 14h]──[Captured]──[Paid → PayPal] │  ← live from webhooks
 ├────────────────────────────────┬─────────────────────────────────┤
 │ Main panel (by status)         │ Checklist                       │
 │                                │  ✓ c1 Contains "Ember"     w3   │
@@ -54,7 +54,7 @@ Mobile: the side column moves below the main panel.
 | `VERIFYING` | Items tick one by one as results arrive | — | — | — |
 | `VERDICT` | Release % with working, per-item results + evidence images, **watermarked previews**, review-window countdown | Request changes (pick failed items), Appeal | Appeal | — |
 | `IN_APPEAL` | Both sides' reasons + evidence | — | — | Uphold / Change % (note required) |
-| `SETTLED` | "Paid $380 to Maya's Venmo", PayPal IDs, **originals unlocked** | Download originals | — | — |
+| `SETTLED` | "Paid $380 to Maya's PayPal", PayPal IDs, **originals unlocked** | Download originals | — | — |
 | `VOIDED` | "Hold voided. Client was not charged." + reason | — | — | — |
 
 There's deliberately no "release less" control for the client. The only paths are request changes (limited) and appeal.
