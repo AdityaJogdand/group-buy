@@ -8,6 +8,7 @@ Escrow where neither side can cheat: both sign the checklist, PayPal holds the m
 Stack: Next.js + SQLite, Claude (Anthropic SDK, vision), `sharp` for image checks, PayPal REST sandbox, AG Grid, Render.
 Prize targets: Most Impactful **or** Best Use of PayPal + AI (max one Honorable Mention), plus one sponsor prize (AG Grid; Render as a backup).
 Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties go to Tech first. Judges may score from the video alone.
+Pitch for first place: **the fight never starts.** The freelancer's private pre-check catches failures before the client sees them; the binding verdict handles the rest. Weak spots to beat: Innovation (other escrow entries) and Presentation.
 
 ---
 
@@ -20,9 +21,14 @@ Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties
 - [x] Sandbox: reauthorize is allowed **once**, day 4–29 only, on the real clock (day 0 → `422 REAUTHORIZATION_TOO_SOON`). The demo can't trigger it live, so the simulated clock has to fake that step
 - [x] Sandbox: `VENMO` is a valid `recipient_wallet`, but the sandbox rejects it (`Recipient wallet not supported in sandbox`). `PAYPAL` works. Demo pays out to a PayPal sandbox account; Venmo stays a one-field production path
 - [ ] Add `ANTHROPIC_API_KEY` to `.env`
-- [ ] Decide the final name
+- [x] Final name: **Countersign** (Oct 18). Rejected "Uphold": an existing payments company's trademark
 
 **Exit:** no blocker, or the plan is adjusted.
+
+## Ongoing from Oct 18 (needs lead time)
+- [ ] Recruit 3–5 freelance designers (r/graphic_design, Fiverr/Upwork contacts, friends) to try the hosted demo from Nov 4
+- [ ] Get on-camera clips or written quotes from at least 2 of them for the video
+- [ ] Collect ~30 real logos/PDFs (good and flawed) for the test set
 
 ---
 
@@ -30,7 +36,7 @@ Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties
 - [ ] Authorize order (hold)
 - [ ] Capture the earned share with `final_capture`, remainder returned
 - [ ] Void (0%, cancel, missed deadline)
-- [ ] Reauthorize from day 4; store the new authorization ID
+- [ ] Reauthorize from day 4; store the new authorization ID (real call only, not a demo beat; one line in the video)
 - [x] Payouts (works in `phase1.mjs`); `recipient_wallet: VENMO` is production-only (sandbox rejects it)
 - [ ] Webhook endpoint + signature check; events from PRD 8.3
 - [ ] Simulated clock for demo mode (72 h → 60 s, hold days)
@@ -44,11 +50,13 @@ Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties
 - [ ] Code checks with `sharp` + PDF parser; derived images (32 px render, crops)
 - [ ] Vision verifier: labelled multi-image input, per-item result + evidence IDs
 - [ ] Second pass on borderline items; disagreement → reviewer
+- [ ] Freelancer pre-check: same verifier, results visible only to the freelancer, before submit
 - [ ] Release % computed in code from weights
 - [ ] Watermarked low-res preview generation
-- [ ] Test set: ~10 logos/PDFs (good and flawed) with expected results
+- [ ] Test set: ~30 logos/PDFs (good and flawed) with expected results set by a human
+- [ ] Results table (matches vs human, per item type) for the README and video
 
-**Exit:** ≥ 9/10 test deliverables match expected results.
+**Exit:** ≥ 90% of test deliverables match the human result.
 
 ---
 
@@ -56,10 +64,12 @@ Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties
 - [ ] Contract page with Client / Freelancer / Reviewer role switcher
 - [ ] Both-side checklist signing; edits reset signatures
 - [ ] Fund with PayPal buttons (authorize); hold countdown
-- [ ] Upload → watermarked previews → verdict with evidence images
+- [ ] Upload → pre-check → watermarked previews → verdict; the evidence image (e.g. 32 px render) is the largest element on the verdict screen
 - [ ] 72 h review window: change request (names a failed item, max 2) or appeal; otherwise settles
-- [ ] Reviewer queue + audit trail in AG Grid
+- [ ] Reviewer queue in AG Grid as a real tool: filter by verdict, evidence thumbnails in cells, uphold/change inline
+- [ ] Audit trail in AG Grid: every check, every PayPal ID
 - [ ] Live money timeline fed by webhooks
+- [ ] "Start demo contract" button on the hosted URL: seeded files, demo clock, no sandbox login needed
 - [ ] **Nov 4: deployed on Render**
 
 **Exit:** the whole demo runs on the hosted URL without touching code.
@@ -67,9 +77,8 @@ Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties
 ---
 
 ## Phase 4: Polish + submit (Nov 5–11)
-- [ ] *(Stretch)* v1 → v2 visual diff: fixed items confirmed, no regressions
-- [ ] *(Stretch)* KERNEL browser agent for website deliverables
-- [ ] Record the demo (< 3 min, YouTube)
+- [ ] Polish the contract and verdict screens (Design criterion: complete product, not a proof of concept)
+- [ ] Video, 2 full days (Nov 7–8): script, voiceover, captions, royalty-free music; re-cut until a stranger gets it on first viewing; < 3 min, YouTube
 - [ ] README: setup, sandbox logins, architecture, limits, multiparty as production path
 - [ ] MIT `LICENSE` file; check it shows in the GitHub About section
 - [ ] Keep the Render demo up through Dec 15 (persistent disk or reseed, API spend cap)
@@ -80,18 +89,20 @@ Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties
 ### Demo script
 | Time | Beat |
 |---|---|
-| 0:00 | Maya, a brand designer: "The client used my logo and cancelled." |
+| 0:00 | Maya, a brand designer: "The client used my logo and cancelled." Real designer clips back it up |
 | 0:20 | Client and Maya both sign a 5-item checklist for a logo |
-| 0:45 | Client funds $400; PayPal holds it, with a countdown |
-| 1:00 | Maya uploads v1; the client only sees a watermarked preview |
-| 1:15 | Verdict: 2 of 5 fail, with the 32 px render as proof; client requests changes on those items |
-| 1:45 | v2 passes. Client tries to release 0% — **blocked**; only "appeal" is offered |
-| 2:15 | Window closes → capture → Maya's PayPal +$380; originals unlock for the client |
-| 2:40 | Audit trail in AG Grid: every check, every PayPal ID |
+| 0:40 | Client funds $400; PayPal holds it, with a countdown |
+| 0:55 | Maya runs the private pre-check: 2 of 5 would fail. **Hold on the 32 px render.** She fixes them before the client sees anything |
+| 1:25 | She submits; the client sees only a watermarked preview; verdict 5/5 with evidence |
+| 1:45 | Client tries to release 0% — **blocked**; only "appeal" is offered |
+| 2:05 | Window closes → capture → Maya's PayPal +$380; originals unlock for the client |
+| 2:25 | Reviewer queue and audit trail in AG Grid: every check, every PayPal ID |
+| 2:40 | "28/30 matched a human reviewer" + designer quote; close on the pitch |
 
 ---
 
 ## Kill switches
 - Money path not working by Oct 24 → drop reauthorize and webhooks; demo hold → capture → payout
-- Vision verifier under 7/10 on Oct 30 → limit to code checks + 2 vision items
+- Vision verifier under 70% on Oct 30 → limit to code checks + 2 vision items
+- Designers not recruited by Nov 1 → drop the clips, use written quotes from any freelancer feedback
 - Not deployed by Nov 4 → stop features, fix deployment

@@ -20,7 +20,7 @@ Plan and dates: `PHASES.md` · Screens: `FRONTEND.md` · Team doc: https://claud
 | Deliverables checked | GitHub repos, text pages | Websites | **Images and PDFs, with visual evidence** |
 | Client keeps work without paying | Possible | ? | **Blocked: watermarked previews** |
 | Hold expiry (3-day / 29-day) | Not handled | ? | **Countdown + reauthorize** |
-| Webhooks, Venmo | No | ? | **Yes** |
+| Webhooks, Venmo | No | ? | **Webhooks yes; Venmo in production (sandbox rejects it)** |
 
 Pitch leads with fairness and creative work. Never say "AI escrow".
 
