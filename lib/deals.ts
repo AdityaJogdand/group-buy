@@ -1,7 +1,18 @@
 // Deal money path. Rules from PRD §7 live here, not in the model:
 // price within [floor, list], charge <= each buyer's hold, all holds settle together.
-import { DatabaseSync } from 'node:sqlite';
-import { paypal } from './paypal.mjs';
+import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
+import { paypal } from './paypal.ts';
+
+export type DealStatus = 'OPEN' | 'CLOSING' | 'CAPTURED' | 'EXPIRED';
+export type HoldStatus = 'PENDING' | 'HELD' | 'CAPTURED' | 'CAPTURE_FAILED' | 'DROPPED' | 'LEFT' | 'VOIDED' | 'EXPIRED';
+export type Deal = {
+  id: number; product: string; list_cents: number; floor_cents: number;
+  target: number; status: DealStatus; price_cents: number | null; closes_at: string;
+};
+export type Hold = {
+  id: number; deal_id: number; buyer: string; max_cents: number; order_id: string;
+  authorization_id: string | null; capture_id: string | null; status: HoldStatus;
+};
 
 export const db = new DatabaseSync(process.env.DB_PATH ?? 'groupbuy.db');
 db.exec(`
@@ -15,27 +26,38 @@ db.exec(`
     id integer primary key, deal_id int, at text not null default (datetime('now')), type text not null, data text);
 `);
 
-const usd = cents => (cents / 100).toFixed(2);
-const log = (dealId, type, data) =>
+const usd = (cents: number) => (cents / 100).toFixed(2);
+const log = (dealId: number, type: string, data: object) =>
   db.prepare('insert into events (deal_id, type, data) values (?, ?, ?)').run(dealId, type, JSON.stringify(data));
-export const getDeal = id => db.prepare('select * from deals where id = ?').get(id);
-export const getHolds = dealId => db.prepare('select * from holds where deal_id = ? order by id').all(dealId);
-const setHold = (id, fields) => {
+export const getDeal = (id: number) => db.prepare('select * from deals where id = ?').get(id) as Deal | undefined;
+export const getHolds = (dealId: number) =>
+  db.prepare('select * from holds where deal_id = ? order by id').all(dealId) as Hold[];
+const getHold = (where: 'id' | 'order_id', value: number | string) =>
+  db.prepare(`select * from holds where ${where} = ?`).get(value) as Hold | undefined;
+const setHold = (id: number, fields: Partial<Hold>) => {
   const keys = Object.keys(fields);
-  db.prepare(`update holds set ${keys.map(k => `${k} = ?`).join(', ')} where id = ?`).run(...Object.values(fields), id);
+  db.prepare(`update holds set ${keys.map(k => `${k} = ?`).join(', ')} where id = ?`)
+    .run(...(Object.values(fields) as SQLInputValue[]), id);
+};
+const mustGetDeal = (id: number) => {
+  const deal = getDeal(id);
+  if (!deal) throw new Error(`unknown deal ${id}`);
+  return deal;
 };
 
-export function createDeal({ product, listCents, floorCents, target, closesAt }) {
+export function createDeal({ product, listCents, floorCents, target, closesAt }:
+  { product: string; listCents: number; floorCents: number; target: number; closesAt: Date }) {
   if (!(floorCents > 0 && floorCents <= listCents && target > 0)) throw new Error('bad deal terms');
-  const { lastInsertRowid: id } = db.prepare(
+  const { lastInsertRowid } = db.prepare(
     'insert into deals (product, list_cents, floor_cents, target, closes_at) values (?, ?, ?, ?, ?)',
   ).run(product, listCents, floorCents, target, closesAt.toISOString());
+  const id = Number(lastInsertRowid);
   log(id, 'DEAL_OPENED', { product, listCents, target });
-  return Number(id);
+  return id;
 }
 
 // Creates the PayPal order for a buyer's hold. returnUrl only for the redirect flow (simulated buyers).
-export async function startHold(dealId, buyer, maxCents, { returnUrl } = {}) {
+export async function startHold(dealId: number, buyer: string, maxCents: number, { returnUrl }: { returnUrl?: string } = {}) {
   const deal = getDeal(dealId);
   if (deal?.status !== 'OPEN') throw new Error(`deal ${dealId} is not open`);
   if (!(Number.isInteger(maxCents) && maxCents > 0 && maxCents <= deal.list_cents)) throw new Error('max price out of range');
@@ -48,16 +70,16 @@ export async function startHold(dealId, buyer, maxCents, { returnUrl } = {}) {
   });
   const { lastInsertRowid } = db.prepare('insert into holds (deal_id, buyer, max_cents, order_id) values (?, ?, ?, ?)')
     .run(dealId, buyer, maxCents, order.id);
-  const approveUrl = order.links.find(l => l.rel === 'payer-action' || l.rel === 'approve')?.href;
-  return { holdId: Number(lastInsertRowid), orderId: order.id, approveUrl };
+  const approveUrl: string = order.links.find((l: { rel: string }) => l.rel === 'payer-action' || l.rel === 'approve')?.href;
+  return { holdId: Number(lastInsertRowid), orderId: order.id as string, approveUrl };
 }
 
 // After buyer approval: place the hold.
-export async function authorizeHold(orderId) {
-  const hold = db.prepare('select * from holds where order_id = ?').get(orderId);
+export async function authorizeHold(orderId: string): Promise<Hold> {
+  const hold = getHold('order_id', orderId);
   if (!hold) throw new Error(`unknown order ${orderId}`);
   if (hold.status !== 'PENDING') return hold;
-  if (getDeal(hold.deal_id).status !== 'OPEN') throw new Error('deal no longer open');
+  if (mustGetDeal(hold.deal_id).status !== 'OPEN') throw new Error('deal no longer open');
   const data = await paypal('POST', `/v2/checkout/orders/${orderId}/authorize`, {}, `auth-${orderId}`);
   const auth = data.purchase_units[0].payments.authorizations[0];
   setHold(hold.id, { authorization_id: auth.id, status: 'HELD' });
@@ -65,28 +87,28 @@ export async function authorizeHold(orderId) {
   return { ...hold, authorization_id: auth.id, status: 'HELD' };
 }
 
-async function voidHold(hold, reason) {
+async function voidHold(hold: Hold, reason: 'LEFT' | 'DROPPED' | 'VOIDED') {
   await paypal('POST', `/v2/payments/authorizations/${hold.authorization_id}/void`, {}, `void-${hold.id}`);
   setHold(hold.id, { status: reason });
   log(hold.deal_id, reason, { holdId: hold.id, authorizationId: hold.authorization_id });
 }
 
-export async function leaveDeal(holdId) {
-  const hold = db.prepare('select * from holds where id = ?').get(holdId);
-  if (hold?.status !== 'HELD' || getDeal(hold.deal_id).status !== 'OPEN') throw new Error('cannot leave now');
+export async function leaveDeal(holdId: number) {
+  const hold = getHold('id', holdId);
+  if (hold?.status !== 'HELD' || mustGetDeal(hold.deal_id).status !== 'OPEN') throw new Error('cannot leave now');
   await voidHold(hold, 'LEFT');
 }
 
 // Holds whose max >= price are captured at price; the rest are voided. Re-run on a
 // CLOSING deal to retry failed captures (request IDs make the retry safe).
-export async function closeDeal(dealId, priceCents) {
-  const deal = getDeal(dealId);
+export async function closeDeal(dealId: number, priceCents: number): Promise<Deal> {
+  const deal = mustGetDeal(dealId);
   if (deal.status === 'CLOSING' && deal.price_cents !== priceCents) throw new Error('deal already closing at another price');
-  if (!['OPEN', 'CLOSING'].includes(deal.status)) throw new Error(`deal ${dealId} is ${deal.status}`);
+  if (deal.status !== 'OPEN' && deal.status !== 'CLOSING') throw new Error(`deal ${dealId} is ${deal.status}`);
   if (!(Number.isInteger(priceCents) && priceCents >= deal.floor_cents && priceCents <= deal.list_cents))
     throw new Error('price outside [floor, list]');
   const holds = getHolds(dealId);
-  const payers = holds.filter(h => ['HELD', 'CAPTURE_FAILED'].includes(h.status) && h.max_cents >= priceCents);
+  const payers = holds.filter(h => (h.status === 'HELD' || h.status === 'CAPTURE_FAILED') && h.max_cents >= priceCents);
   if (deal.status === 'OPEN' && payers.length < deal.target) throw new Error(`only ${payers.length} of ${deal.target} buyers at that price`);
 
   db.prepare("update deals set status = 'CLOSING', price_cents = ? where id = ?").run(priceCents, dealId);
@@ -103,16 +125,16 @@ export async function closeDeal(dealId, priceCents) {
       log(dealId, 'CAPTURED', { holdId: h.id, captureId: cap.id, amount: usd(priceCents) });
     } catch (e) {
       setHold(h.id, { status: 'CAPTURE_FAILED' });
-      log(dealId, 'CAPTURE_FAILED', { holdId: h.id, error: e.message });
+      log(dealId, 'CAPTURE_FAILED', { holdId: h.id, error: (e as Error).message });
     }
   }
   const failed = getHolds(dealId).some(h => h.status === 'CAPTURE_FAILED');
   if (!failed) db.prepare("update deals set status = 'CAPTURED' where id = ?").run(dealId);
-  return getDeal(dealId);
+  return mustGetDeal(dealId);
 }
 
-export async function expireDeal(dealId) {
-  if (getDeal(dealId).status !== 'OPEN') throw new Error('only open deals expire');
+export async function expireDeal(dealId: number) {
+  if (mustGetDeal(dealId).status !== 'OPEN') throw new Error('only open deals expire');
   db.prepare("update deals set status = 'EXPIRED' where id = ?").run(dealId);
   for (const h of getHolds(dealId)) {
     if (h.status === 'HELD') await voidHold(h, 'VOIDED');
@@ -123,6 +145,6 @@ export async function expireDeal(dealId) {
 
 // Call on a timer; pass a fake `now` for the demo clock.
 export async function expireDue(now = new Date()) {
-  for (const { id } of db.prepare("select id from deals where status = 'OPEN' and closes_at <= ?").all(now.toISOString()))
-    await expireDeal(id);
+  const due = db.prepare("select id from deals where status = 'OPEN' and closes_at <= ?").all(now.toISOString()) as { id: number }[];
+  for (const { id } of due) await expireDeal(id);
 }

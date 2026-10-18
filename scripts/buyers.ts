@@ -4,11 +4,11 @@ import { chromium } from 'playwright';
 export const RETURN_URL = 'http://localhost:3000/paypal/return';
 
 // Sandbox pages sometimes time out; one retry.
-export async function approve(approveUrl) {
+export async function approve(approveUrl: string) {
   try { return await approveOnce(approveUrl); } catch { return approveOnce(approveUrl); }
 }
 
-async function approveOnce(approveUrl) {
+async function approveOnce(approveUrl: string) {
   const { PAYPAL_BUYER_EMAIL: email, PAYPAL_BUYER_PASSWORD: password } = process.env;
   if (!email || !password) throw new Error('PAYPAL_BUYER_EMAIL / PAYPAL_BUYER_PASSWORD missing');
   const browser = await chromium.launch();

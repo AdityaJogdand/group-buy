@@ -26,13 +26,13 @@ Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties
 ---
 
 ## Phase 1: Money path (Oct 19–24)
-- [x] Join deal: authorize order with the buyer's max (`lib/deals.mjs`)
+- [x] Join deal: authorize order with the buyer's max (`lib/deals.ts`)
 - [x] Close deal: capture every hold at the group price (`final_capture: true`), idempotent
 - [x] Fail / expire / leave: void
 - [x] Drop-out: buyers below the final price voided, rest captured
 - [ ] Webhook endpoint + signature check (needs a public URL → do with the Render deploy)
 - [ ] Simulated clock (3 days → 60 s); `expireDue(now)` already takes a fake time
-- [x] Simulated buyers: `scripts/buyers.mjs` approves through the real PayPal page (Oct 18: `npm run phase1` → PASS, 10 holds)
+- [x] Simulated buyers: `scripts/buyers.ts` approves through the real PayPal page (Oct 18: `npm run phase1` → PASS, 10 holds)
 
 **Exit:** one script runs 5 buyers → close → 5 captures, and 5 buyers → expire → 5 voids; webhooks land.
 

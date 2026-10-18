@@ -1,9 +1,9 @@
 // PayPal REST (sandbox only). Throws on non-2xx with PayPal's issue + debug_id.
 const API = 'https://api-m.sandbox.paypal.com';
-let token;
+let token: { value: string; exp: number } | undefined;
 
-async function accessToken() {
-  if (token?.exp > Date.now()) return token.value;
+async function accessToken(): Promise<string> {
+  if (token && token.exp > Date.now()) return token.value;
   const { PAYPAL_CLIENT_ID: id, PAYPAL_CLIENT_SECRET: secret } = process.env;
   if (!id || !secret) throw new Error('PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET missing');
   const r = await fetch(`${API}/v1/oauth2/token`, {
@@ -16,7 +16,8 @@ async function accessToken() {
 }
 
 // requestId -> PayPal-Request-Id, so a retried capture/void can't run twice.
-export async function paypal(method, path, body, requestId) {
+// ponytail: responses typed `any`; add PayPal response types if field typos start biting.
+export async function paypal(method: string, path: string, body?: unknown, requestId?: string): Promise<any> {
   const res = await fetch(API + path, {
     method,
     headers: {
@@ -24,13 +25,12 @@ export async function paypal(method, path, body, requestId) {
       'Content-Type': 'application/json',
       ...(requestId && { 'PayPal-Request-Id': requestId }),
     },
-    body: body && JSON.stringify(body),
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = res.status === 204 ? {} : await res.json();
   if (!res.ok) {
-    const e = new Error(`${method} ${path} -> ${res.status} ${data.details?.[0]?.issue ?? data.name} (debug_id ${data.debug_id})`);
-    e.status = res.status;
-    throw e;
+    const msg = `${method} ${path} -> ${res.status} ${data.details?.[0]?.issue ?? data.name} (debug_id ${data.debug_id})`;
+    throw Object.assign(new Error(msg), { status: res.status });
   }
   return data;
 }
