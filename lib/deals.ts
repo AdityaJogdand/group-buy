@@ -133,18 +133,24 @@ export async function closeDeal(dealId: number, priceCents: number): Promise<Dea
   return mustGetDeal(dealId);
 }
 
+// Re-run on an EXPIRED deal to finish voids a crash interrupted (request IDs make the retry safe).
 export async function expireDeal(dealId: number) {
-  if (mustGetDeal(dealId).status !== 'OPEN') throw new Error('only open deals expire');
-  db.prepare("update deals set status = 'EXPIRED' where id = ?").run(dealId);
+  const { status } = mustGetDeal(dealId);
+  if (status !== 'OPEN' && status !== 'EXPIRED') throw new Error('only open deals expire');
+  if (status === 'OPEN') {
+    db.prepare("update deals set status = 'EXPIRED' where id = ?").run(dealId);
+    log(dealId, 'EXPIRED', {});
+  }
   for (const h of getHolds(dealId)) {
     if (h.status === 'HELD') await voidHold(h, 'VOIDED');
     else if (h.status === 'PENDING') setHold(h.id, { status: 'EXPIRED' });
   }
-  log(dealId, 'EXPIRED', {});
 }
 
-// Call on a timer; pass a fake `now` for the demo clock.
+// Call on a timer; pass a fake `now` for the demo clock. Also resumes half-voided expired deals.
 export async function expireDue(now = new Date()) {
-  const due = db.prepare("select id from deals where status = 'OPEN' and closes_at <= ?").all(now.toISOString()) as { id: number }[];
+  const due = db.prepare(`select id from deals where (status = 'OPEN' and closes_at <= ?)
+    or (status = 'EXPIRED' and exists (select 1 from holds where deal_id = deals.id and status = 'HELD'))`)
+    .all(now.toISOString()) as { id: number }[];
   for (const { id } of due) await expireDeal(id);
 }

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "phase1": "node --no-warnings --env-file=.env scripts/phase1.ts",
+    "clock": "CLOCK_SPEED=4320 node --no-warnings --env-file=.env scripts/clock.ts",
     "typecheck": "tsc"
   },
   "devDependencies": {

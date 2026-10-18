@@ -31,7 +31,7 @@ Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties
 - [x] Fail / expire / leave: void
 - [x] Drop-out: buyers below the final price voided, rest captured
 - [ ] Webhook endpoint + signature check (needs a public URL → do with the Render deploy)
-- [ ] Simulated clock (3 days → 60 s); `expireDue(now)` already takes a fake time
+- [x] Simulated clock (3 days → 60 s): `lib/clock.ts`, CLOCK_SPEED=4320 (Oct 19: `npm run clock` → PASS)
 - [x] Simulated buyers: `scripts/buyers.ts` approves through the real PayPal page (Oct 18: `npm run phase1` → PASS, 10 holds)
 
 **Exit:** one script runs 5 buyers → close → 5 captures, and 5 buyers → expire → 5 voids; webhooks land.
