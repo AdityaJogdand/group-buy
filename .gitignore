@@ -1,4 +1,4 @@
 .env
-.state.json
 node_modules
 spike/*.png
+groupbuy.db
