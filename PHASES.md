@@ -1,75 +1,62 @@
-# Countersign — Build Phases
+# Group-Buy Agent — Build Phases
 
-PayPal AI Hackathon · Deadline **Nov 12, 2026** · Hosted demo **Nov 4** · Code freeze **Nov 9** · Submit **Nov 11**
-Spec: `PRD.md` · Screens: `FRONTEND.md` · Team doc: https://claude.ai/code/artifact/a2e33310-b750-496e-baae-7ff7682e0d6f
+PayPal AI Hackathon · Deadline **Nov 12, 2026, 12:00pm PST** · Hosted demo **Nov 4** · Code freeze **Nov 9** · Submit **Nov 11**
+Spec: `PRD.md` · Screens: `FRONTEND.md`
 
-Escrow where neither side can cheat: both sign the checklist, PayPal holds the money, code + Claude vision check the work with evidence, and the verdict binds both sides unless appealed.
+Strangers pool together for the bulk price: PayPal holds each buyer's max, agents group and negotiate, and every hold is captured at the group price or voided.
 
-Stack: Next.js + SQLite, Claude (Anthropic SDK, vision), `sharp` for image checks, PayPal REST sandbox, AG Grid, Render.
-Prize targets: Most Impactful **or** Best Use of PayPal + AI (max one Honorable Mention), plus one sponsor prize (AG Grid; Render as a backup).
-Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties go to Tech first. Judges may score from the video alone.
-Pitch for first place: **the fight never starts.** The freelancer's private pre-check catches failures before the client sees them; the binding verdict handles the rest. Weak spots to beat: Innovation (other escrow entries) and Presentation.
+Stack: Next.js + SQLite, Claude (Anthropic SDK), PayPal REST sandbox + v6 Web SDK, AG Grid, Render.
+Prize targets: Best Use of Agentic Commerce **or** Best Use of PayPal + AI (max one Honorable Mention), plus AG Grid sponsor prize.
+Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties go to Tech. Judges may score from the video alone.
 
 ---
 
 ## Phase 0: Validate (Oct 17–19)
-- [x] Read the Devpost rules (Oct 17). Findings:
+- [x] Devpost rules (Oct 17):
   - Win at most 1 Grand/Honorable Mention + 1 sponsor prize
-  - Hosted demo must stay up, free, until judging ends **Dec 15**. Render free tier sleeps and wipes local disk → SQLite needs a persistent disk or a reseed on boot; cap the Anthropic spend
-  - Repo public, license file shown in the About section, README with sandbox logins
-  - Video < 3 min on YouTube; no copyrighted music or third-party trademarks without permission
-- [x] Sandbox: reauthorize is allowed **once**, day 4–29 only, on the real clock (day 0 → `422 REAUTHORIZATION_TOO_SOON`). The demo can't trigger it live, so the simulated clock has to fake that step
-- [x] Sandbox: `VENMO` is a valid `recipient_wallet`, but the sandbox rejects it (`Recipient wallet not supported in sandbox`). `PAYPAL` works. Demo pays out to a PayPal sandbox account; Venmo stays a one-field production path
+  - Hosted demo stays up, free, until **Dec 15** (Render free tier sleeps and wipes disk → reseed on boot; cap Anthropic spend)
+  - Public repo, license shown in About, README with sandbox logins
+  - Video < 3 min on YouTube; no copyrighted music or third-party trademarks
+- [x] Sandbox (Oct 18, `spike/groupbuy.mjs`): authorize $160 → capture $150 ✓; void ✓; capture up to 115% ✓, above → 422
+- [x] Sandbox: headless buyer approval 10/10 (v6 SDK + Playwright) → simulated buyers are feasible
 - [ ] Add `ANTHROPIC_API_KEY` to `.env`
-- [x] Final name: **Countersign** (Oct 18). Rejected "Uphold": an existing payments company's trademark
-
-**Exit:** no blocker, or the plan is adjusted.
-
-## Ongoing from Oct 18 (needs lead time)
-- [ ] Recruit 3–5 freelance designers (r/graphic_design, Fiverr/Upwork contacts, friends) to try the hosted demo from Nov 4
-- [ ] Get on-camera clips or written quotes from at least 2 of them for the video
-- [ ] Collect ~30 real logos/PDFs (good and flawed) for the test set
+- [ ] Create 4–5 extra sandbox buyer accounts (developer dashboard)
+- [ ] Pick name and demo product
 
 ---
 
 ## Phase 1: Money path (Oct 19–24)
-- [ ] Authorize order (hold)
-- [ ] Capture the earned share with `final_capture`, remainder returned
-- [ ] Void (0%, cancel, missed deadline)
-- [ ] Reauthorize from day 4; store the new authorization ID (real call only, not a demo beat; one line in the video)
-- [x] Payouts (works in `phase1.mjs`); `recipient_wallet: VENMO` is production-only (sandbox rejects it)
-- [ ] Webhook endpoint + signature check; events from PRD 8.3
-- [ ] Simulated clock for demo mode (72 h → 60 s, hold days)
+- [ ] Join deal: authorize order with the buyer's max
+- [ ] Close deal: capture every hold at the group price (`final_capture: true`), idempotent
+- [ ] Fail / expire / leave: void
+- [ ] Drop-out: buyers below the final price voided, rest captured
+- [ ] Webhook endpoint + signature check
+- [ ] Simulated clock (3 days → 60 s)
+- [ ] Simulated buyers: script that joins N buyers through the real PayPal popup
 
-**Exit:** one script runs hold → reauthorize → partial capture → PayPal payout, and hold → void; webhooks land.
+**Exit:** one script runs 5 buyers → close → 5 captures, and 5 buyers → expire → 5 voids; webhooks land.
 
 ---
 
-## Phase 2: AI core (Oct 24–30)
-- [ ] Checklist drafting: items tagged `code` or `vision`, weights, rejected uncheckable wishes
-- [ ] Code checks with `sharp` + PDF parser; derived images (32 px render, crops)
-- [ ] Vision verifier: labelled multi-image input, per-item result + evidence IDs
-- [ ] Second pass on borderline items; disagreement → reviewer
-- [ ] Freelancer pre-check: same verifier, results visible only to the freelancer, before submit
-- [ ] Release % computed in code from weights
-- [ ] Watermarked low-res preview generation
-- [ ] Test set: ~30 logos/PDFs (good and flawed) with expected results set by a human
-- [ ] Results table (matches vs human, per item type) for the README and video
+## Phase 2: AI agents (Oct 24–30)
+- [ ] Intake: free text → `{product, max, deadline}`, one follow-up when unclear
+- [ ] Grouping: join an open deal or open a new one
+- [ ] Negotiation: buyer-pool agent vs seller agent, max 4 rounds, transcript stored
+- [ ] Code guard: price within `[floor, list]` and ≤ every captured hold
+- [ ] Test sets: 30 buyer requests with expected parse; 50 negotiation runs
+- [ ] Results table for README and video
 
-**Exit:** ≥ 90% of test deliverables match the human result.
+**Exit:** ≥ 90% intake accuracy; 0/50 negotiations outside bounds.
 
 ---
 
 ## Phase 3: App + UI (Oct 31–Nov 4)
-- [ ] Contract page with Client / Freelancer / Reviewer role switcher
-- [ ] Both-side checklist signing; edits reset signatures
-- [ ] Fund with PayPal buttons (authorize); hold countdown
-- [ ] Upload → pre-check → watermarked previews → verdict; the evidence image (e.g. 32 px render) is the largest element on the verdict screen
-- [ ] 72 h review window: change request (names a failed item, max 2) or appeal; otherwise settles
-- [ ] Reviewer queue in AG Grid as a real tool: filter by verdict, evidence thumbnails in cells, uphold/change inline
-- [ ] Audit trail in AG Grid: every check, every PayPal ID
-- [ ] Live money timeline fed by webhooks
-- [ ] "Start demo contract" button on the hosted URL: seeded files, demo clock, no sandbox login needed
+- [ ] Buyer chat → hold → deal page
+- [ ] Live deal page: progress bar, countdown, price as buyers join
+- [ ] Negotiation transcript, streaming
+- [ ] Seller dashboard in AG Grid: buyers, holds, status, PayPal IDs
+- [ ] Audit trail in AG Grid
+- [ ] "Run demo" button: seeded product, simulated buyers, demo clock
 - [ ] **Nov 4: deployed on Render**
 
 **Exit:** the whole demo runs on the hosted URL without touching code.
@@ -77,32 +64,30 @@ Pitch for first place: **the fight never starts.** The freelancer's private pre-
 ---
 
 ## Phase 4: Polish + submit (Nov 5–11)
-- [ ] Polish the contract and verdict screens (Design criterion: complete product, not a proof of concept)
-- [ ] Video, 2 full days (Nov 7–8): script, voiceover, captions, royalty-free music; re-cut until a stranger gets it on first viewing; < 3 min, YouTube
-- [ ] README: setup, sandbox logins, architecture, limits, multiparty as production path
-- [ ] MIT `LICENSE` file; check it shows in the GitHub About section
-- [ ] Keep the Render demo up through Dec 15 (persistent disk or reseed, API spend cap)
+- [ ] Polish deal page and seller dashboard
+- [ ] Video (Nov 7–8): script, voiceover, captions; < 3 min, YouTube
+- [ ] README: setup, sandbox logins, architecture, limits
+- [ ] MIT `LICENSE`
+- [ ] Keep Render demo up through Dec 15
 - [ ] Devpost write-up
-- [ ] **Nov 9: code freeze**
-- [ ] **Nov 11: submit**
+- [ ] **Nov 9: code freeze** · **Nov 11: submit**
 
 ### Demo script
 | Time | Beat |
 |---|---|
-| 0:00 | Maya, a brand designer: "The client used my logo and cancelled." Real designer clips back it up |
-| 0:20 | Client and Maya both sign a 5-item checklist for a logo |
-| 0:40 | Client funds $400; PayPal holds it, with a countdown |
-| 0:55 | Maya runs the private pre-check: 2 of 5 would fail. **Hold on the 32 px render.** She fixes them before the client sees anything |
-| 1:25 | She submits; the client sees only a watermarked preview; verdict 5/5 with evidence |
-| 1:45 | Client tries to release 0% — **blocked**; only "appeal" is offered |
-| 2:05 | Window closes → capture → Maya's PayPal +$380; originals unlock for the client |
-| 2:25 | Reviewer queue and audit trail in AG Grid: every check, every PayPal ID |
-| 2:40 | "28/30 matched a human reviewer" + designer quote; close on the pitch |
+| 0:00 | Sam wants a $200 course; alone, no discount |
+| 0:15 | Sam types "UX course under $160"; agent finds a deal: 14 of 20 |
+| 0:35 | Sam approves a $160 PayPal hold — not charged |
+| 0:50 | Buyers keep joining; progress bar fills to 20 |
+| 1:10 | Negotiation live: pool agent vs seller agent → $150 |
+| 1:35 | **Deal locks: 20 captures at $150 at once**; Sam's PayPal shows $150, not $160 |
+| 1:55 | Second deal fails to fill → all holds voided, nobody charged |
+| 2:15 | Seller dashboard in AG Grid: 20 sales, every PayPal ID |
+| 2:35 | Close: "Bulk prices for everyone, and nobody pays unless the deal happens" |
 
 ---
 
 ## Kill switches
-- Money path not working by Oct 24 → drop reauthorize and webhooks; demo hold → capture → payout
-- Vision verifier under 70% on Oct 30 → limit to code checks + 2 vision items
-- Designers not recruited by Nov 1 → drop the clips, use written quotes from any freelancer feedback
+- Money path not working by Oct 24 → drop webhooks; poll PayPal instead
+- Negotiation unreliable by Oct 30 → seller tiers set price; AI only explains the result
 - Not deployed by Nov 4 → stop features, fix deployment

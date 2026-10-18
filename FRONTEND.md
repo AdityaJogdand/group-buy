@@ -1,108 +1,91 @@
-# Frontend Spec — Countersign
+# Frontend Spec — Group-Buy Agent
 
 Spec: `PRD.md` · Dates: `PHASES.md` (Phase 3, Oct 31–Nov 4)
 
 ## Principles
-- **Demo-first.** Each screen reads clearly in a screen recording: big status, one primary action.
-- **One shared contract page.** A role switcher (Client · Freelancer · Reviewer) changes which actions appear.
-- **Where the money is, always visible.** A money timeline at the top: *Not funded → Held (2d 14h left) → Captured → Paid to PayPal*.
-- **Fairness is visible.** Both signatures, the review-window countdown and "appeal" are always on screen when relevant.
-- No login, no settings.
+- **Demo-first.** Each screen reads clearly in a screen recording: big number, one primary action.
+- **The progress bar is the hero.** "18 of 20 buyers" is always the largest thing on the deal page.
+- **Money state always visible.** Per buyer: *Held $160 → Charged $150* or *Held → Released*.
+- **Show the agents working.** Negotiation streams in as chat bubbles.
+- No login, no settings. Role switcher: Buyer · Seller.
 
 ## Stack
 | Piece | Choice |
 |---|---|
 | Framework | Next.js (App Router) + React |
 | Styling | Tailwind CSS |
-| Tables | **AG Grid Community** (audit trail, reviewer queue) — sponsor prize |
-| PayPal | JS SDK buttons, `intent=authorize`, `enable-funding=venmo` |
-| Data | `fetch` + polling every 2 s on the contract page |
+| Tables | **AG Grid Community** (seller dashboard, audit trail) — sponsor prize |
+| PayPal | v6 Web SDK, `<paypal-button>`, order created with `intent: AUTHORIZE`; page header `Cross-Origin-Opener-Policy: same-origin-allow-popups` |
+| Data | `fetch` + polling every 2 s on the deal page |
 | Hosting | Render |
 
 ## Routes
 | Route | Screen | Who |
 |---|---|---|
-| `/` | Contract list + "New contract" (+ `?demo=1` seeds Maya's logo contract) | All |
-| `/new` | Brief form | Client |
-| `/c/[id]` | Contract page (all stages) | All |
-| `/c/[id]/audit` | Audit trail (AG Grid) | All |
-| `/review` | Reviewer queue (AG Grid) | Reviewer |
+| `/` | Buyer chat ("What do you want, and your max price?") + open deals | Buyer |
+| `/d/[id]` | Deal page (all stages) | All |
+| `/seller` | Products (tiers, floor) + deals in AG Grid | Seller |
+| `/d/[id]/audit` | Audit trail (AG Grid) | All |
 
-Role stored in `localStorage` (try/catch, default Client).
+`?demo=1` seeds a product and a "Run demo" button that adds simulated buyers.
 
-## Contract page layout
+## Deal page layout
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│ Maya · Ember logo · $400                                         │
-│ Money: [Not funded]──[HELD · 2d 14h]──[Captured]──[Paid → PayPal] │  ← live from webhooks
-├────────────────────────────────┬─────────────────────────────────┤
-│ Main panel (by status)         │ Checklist                       │
-│                                │  ✓ c1 Contains "Ember"     w3   │
-│                                │  ✗ c4 Readable at 32 px    w2   │
-│                                │ Signed: Client ✓  Maya ✓        │
-│                                │ Timeline of events              │
-└────────────────────────────────┴─────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ UX Design Course · list $200                                 │
+│ ███████████████████████░░░░░  18 of 20 buyers  · 1d 4h left  │
+│ Current best price: $150 (you save $50)                      │
+├───────────────────────────────┬──────────────────────────────┤
+│ Your hold                     │ Negotiation                  │
+│  Held $160 · PayPal ID …      │  🛒 Pool: 20 buyers, $140?    │
+│  [Leave deal]                 │  🏷 Seller: $155             │
+│                               │  🛒 Pool: $150 and we close   │
+│ Buyers (simulated labelled)   │  🏷 Seller: deal ✓           │
+└───────────────────────────────┴──────────────────────────────┘
 ```
-Mobile: the side column moves below the main panel.
+Mobile: negotiation moves below.
 
 ## Main panel by status
-| Status | Panel | Client | Freelancer | Reviewer |
-|---|---|---|---|---|
-| `PROPOSED` | Editable checklist (text, weight, code/vision tag) + rejected wishes with suggestions | Edit, Sign | Edit, Sign | — |
-| `SIGNED` | Locked checklist + deadline + PayPal button | Fund | — | — |
-| `FUNDED` | Hold countdown, deadline, upload zone | Cancel (void) | Upload | — |
-| `VERIFYING` | Items tick one by one as results arrive | — | — | — |
-| `VERDICT` | Release % with working, per-item results + evidence images, **watermarked previews**, review-window countdown | Request changes (pick failed items), Appeal | Appeal | — |
-| `IN_APPEAL` | Both sides' reasons + evidence | — | — | Uphold / Change % (note required) |
-| `SETTLED` | "Paid $380 to Maya's PayPal", PayPal IDs, **originals unlocked** | Download originals | — | — |
-| `VOIDED` | "Hold voided. Client was not charged." + reason | — | — | — |
-
-There's deliberately no "release less" control for the client. The only paths are request changes (limited) and appeal.
+| Status | Buyer sees | Seller sees |
+|---|---|---|
+| `OPEN` | Progress bar, PayPal button (if not joined) or "Held $160", Leave | Holds filling in the grid |
+| `NEGOTIATING` | Streaming transcript | Same + their floor (never shown to buyers) |
+| `CAPTURED` | "Charged $150 — saved $50", PayPal capture ID | 20 sales, total, IDs |
+| `FAILED` / `EXPIRED` | "Deal didn't happen. Your $160 hold was released. You paid nothing." | Voided holds |
 
 ## Key components
-**Result row with evidence**
-```
-✗  c4 · Readable at 32×32 px                          weight 2
-   [original]  [32 px render]      ← evidence thumbnails, click to enlarge
-   Reason: at 32 px the wordmark blurs into the cup icon.
-   Fix: simplify to the icon, or thicken the letterforms.
-```
-- pass ✓ green, partial ◐ amber, fail ✗ red, unsure ? grey. Never color alone.
-
-**Watermarked preview:** a diagonal "PREVIEW · Countersign" overlay at low resolution, served from the API; originals are only served after `SETTLED`.
-
-**Money timeline:** four steps; the active one shows the hold countdown and its PayPal ID; webhook-driven updates flash briefly.
-
-**Countdown:** the review window and the hold honor period. Demo mode shows "(demo: 60 s)".
+- **Progress bar:** count + target, animates as buyers join.
+- **Hold card:** amount held, status, PayPal ID; capture/void flashes when the webhook lands.
+- **Negotiation bubble:** speaker, message, proposed price; invalid offers shown struck through with "rejected: below floor".
+- **Seller grid (AG Grid):** buyer, max, hold status, captured amount, PayPal IDs; filter by status.
 
 ## API routes
 | Method + path | Used by |
 |---|---|
-| `POST /api/contracts` · `GET /api/contracts[/id]` | Brief form, list, contract page |
-| `PATCH /api/contracts/[id]/checklist` · `POST …/sign` | Checklist edit and signing |
-| `POST …/paypal/order` · `POST …/paypal/authorize` | PayPal buttons |
-| `POST …/submissions` (multipart) | Upload |
-| `GET …/files/[fileId]?preview=1` | Watermarked preview / original after settle |
-| `POST …/changes` · `POST …/appeal` · `POST …/cancel` | Client and freelancer actions |
-| `POST …/review` | Reviewer decision |
-| `GET …/events` | Audit trail |
+| `POST /api/intake` | Buyer chat → parsed request + matched deal |
+| `GET /api/deals[/id]` | Deal list, deal page |
+| `POST /api/deals/[id]/order` · `POST …/authorize` | PayPal button (join) |
+| `POST /api/deals/[id]/leave` | Buyer leaves → void |
+| `GET /api/deals/[id]/events` | Audit trail |
+| `POST /api/demo/buyers` | Run demo (simulated buyers) |
 | `POST /api/paypal/webhook` | PayPal (not the UI) |
 
-The server derives every status change; the UI never sets status.
+The server derives every status change and every amount; the UI never sets them.
 
-## PayPal button wiring
+## PayPal button wiring (v6, as in `spike/index.html`)
 ```js
-paypal.Buttons({
-  createOrder: () => post(`/api/contracts/${id}/paypal/order`).then(r => r.orderId),
-  onApprove:   () => post(`/api/contracts/${id}/paypal/authorize`),
-  onError:     () => showError('PayPal could not place the hold. Try again.'),
-}).render('#paypal');
+const session = sdk.createPayPalOneTimePaymentSession({
+  onApprove: () => post(`/api/deals/${id}/authorize`),
+  onError:   () => showError('PayPal could not place the hold. Try again.'),
+});
+button.addEventListener('click', () =>
+  // Don't await order creation before start(): it breaks the popup.
+  session.start({ presentationMode: 'auto' }, post(`/api/deals/${id}/order`).then(o => ({ orderId: o.id }))));
 ```
 
 ## States
-- Loading: skeletons (except `VERIFYING`, which shows live progress).
-- Errors: inline message + retry; PayPal errors show the debug ID.
-- Empty list: "No contracts yet" + "New contract" + "Load demo".
+- Loading: skeletons. Errors: inline message + retry; PayPal errors show the debug ID.
+- No deals: "No open deals — tell the agent what you want."
 
 ## Accessibility
-Real `<button>`s, visible focus, keyboard-reachable upload (a normal file input underneath), icons + text for results, alt text on evidence images.
+Real `<button>`s, visible focus, progress bar with `role="progressbar"` and text, status in words not color alone.
