@@ -10,10 +10,10 @@ const hold = (dealId: number, n: number) => {
   for (let i = 0; i < n; i++) db.prepare("insert into holds (deal_id, buyer, max_cents, status) values (?, 'b', 16000, 'HELD')").run(dealId);
 };
 
-// 1. Below the floor ($120): ask to match the best tier ($160 at 20), no deal opened, floor never named.
+// 1. Below the floor ($120): ask to match the first tier ($180 at 10), no deal opened, floor never named.
 const low = group({ productId: 'ux-course', maxCents: 10000, deadline: null }, now);
 assert.ok('ask' in low);
-assert.match(low.ask, /\$160 at 20 buyers/);
+assert.match(low.ask, /\$180 at 10 buyers/);
 assert.doesNotMatch(low.ask, /\$120/);
 assert.equal((db.prepare('select count(*) n from deals').get() as { n: number }).n, 0);
 

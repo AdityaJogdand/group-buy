@@ -16,10 +16,11 @@ export function group({ productId, maxCents, deadline }: IntakeRequest, now = ne
 
   // ponytail: a buyer probing $119, $121... can find the floor; add per-buyer rate limits if sellers mind.
   if (maxCents < product.floor_cents) {
-    const best = product.tiers.reduce((a, t) => (t.price_cents < a.price_cents ? t : a), product.tiers[0]);
+    // Suggest the first tier (fewest buyers): new deals target it, so a buyer who says yes is never dropped.
+    const first = product.tiers.reduce((a, t) => (t.buyers < a.buyers ? t : a), product.tiers[0]);
     // A tier below the floor would be a seller typo; fall back to the list price rather than leak the floor.
-    const suggest = best && best.price_cents >= product.floor_cents ? best : { buyers: 0, price_cents: product.list_cents };
-    const at = suggest.buyers ? ` at ${suggest.buyers} buyers` : '';
+    const suggest = first && first.price_cents >= product.floor_cents ? first : { buyers: 0, price_cents: product.list_cents };
+    const at = suggest.buyers ? ` at ${suggest.buyers} buyers, and lower as more join` : '';
     return { ask: `${usd(maxCents)} is below what a ${product.name} group deal can close at. ` +
       `The group price is ${usd(suggest.price_cents)}${at}. Can you go up to ${usd(suggest.price_cents)}? ` +
       `You only pay the final group price, never more than your hold.` };

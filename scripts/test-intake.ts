@@ -9,8 +9,8 @@ const say = (...texts: string[]): ChatMessage[] =>
 
 // expect: 'ask', or the fields that must match. deadline may list several acceptable dates.
 type Expect = 'ask' | 'declined' | { productId: string; maxCents: number; deadline?: (string | null)[] };
-const MATCH_ASK = '$100 is below what a UX Design Course group deal can close at. The group price is $160 at 20 buyers. '
-  + 'Can you go up to $160? You only pay the final group price, never more than your hold.';
+const MATCH_ASK = '$100 is below what a UX Design Course group deal can close at. The group price is $180 at 10 buyers, and lower as more join. '
+  + 'Can you go up to $180? You only pay the final group price, never more than your hold.';
 const cases: [string, ChatMessage[], Expect][] = [
   ['clear request', say('a UX course, under $160, before December'),
     { productId: 'ux-course', maxCents: 16000, deadline: ['2026-11-30', '2026-12-01'] }],
@@ -26,7 +26,7 @@ const cases: [string, ChatMessage[], Expect][] = [
     { productId: 'ux-course', maxCents: 15000 }],
   ['two products', say('the workshop and a software seat, $300 total'), 'ask'],
   // Below-floor follow-ups (grouping asks the buyer to match the group price).
-  ['accepts match', say('UX course, $100', MATCH_ASK, 'yes ok'), { productId: 'ux-course', maxCents: 16000 }],
+  ['accepts match', say('UX course, $100', MATCH_ASK, 'yes ok'), { productId: 'ux-course', maxCents: 18000 }],
   ['counter price', say('UX course, $100', MATCH_ASK, 'I can do 130'), { productId: 'ux-course', maxCents: 13000 }],
   ['declines', say('UX course, $100', MATCH_ASK, 'no thanks, too much for me'), 'declined'],
 ];
