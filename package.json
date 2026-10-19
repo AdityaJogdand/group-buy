@@ -5,6 +5,8 @@
   "scripts": {
     "test:money": "node --no-warnings --env-file=.env scripts/test-money-path.ts",
     "test:clock": "CLOCK_SPEED=4320 node --no-warnings --env-file=.env scripts/test-clock.ts",
+    "test:intake": "node --no-warnings --env-file=.env scripts/test-intake.ts",
+    "chat": "node --no-warnings --env-file=.env scripts/chat-intake.ts",
     "typecheck": "tsc"
   },
   "devDependencies": {
