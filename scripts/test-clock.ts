@@ -11,7 +11,7 @@ assert.equal(process.env.CLOCK_SPEED, '4320', 'run with CLOCK_SPEED=4320');
 
 // 5 demo days = 100 s real: room for ~2 browser approvals before it's due.
 const closesAt = new Date(now().getTime() + 5 * 86_400_000);
-const id = createDeal({ product: 'UX Design Course', listCents: 20000, floorCents: 12000, target: 20, closesAt });
+const id = createDeal({ productId: 'ux-course', target: 20, closesAt });
 for (const i of [1, 2]) {
   const { orderId, approveUrl } = await startHold(id, `sim-buyer-${i}`, 16000, { returnUrl: RETURN_URL });
   await approve(approveUrl);

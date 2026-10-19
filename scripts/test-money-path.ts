@@ -18,12 +18,12 @@ async function fill(dealId: number, maxes: number[]) {
   }
 }
 
-const a = createDeal({ product: 'UX Design Course', listCents: 20000, floorCents: 12000, target: 4, closesAt: inADay });
+const a = createDeal({ productId: 'ux-course', target: 4, closesAt: inADay });
 await fill(a, [16000, 16000, 17000, 15000, 14000]);
 const closed = await closeDeal(a, 15000);
 console.log(`deal ${a}: ${closed.status} at $${closed.price_cents! / 100}`);
 
-const b = createDeal({ product: 'UX Design Course', listCents: 20000, floorCents: 12000, target: 20, closesAt: inADay });
+const b = createDeal({ productId: 'ux-course', target: 20, closesAt: inADay });
 await fill(b, [16000, 16000, 16000, 16000, 16000]);
 await expireDeal(b);
 console.log(`deal ${b}: EXPIRED`);
@@ -35,6 +35,9 @@ for (const h of [...getHolds(a), ...getHolds(b)]) {
     const cap = await paypal('GET', `/v2/payments/captures/${h.capture_id}`);
     assert.equal(cap.status, 'COMPLETED');
     assert.equal(cap.amount.value, '150.00');
+    // A reused PayPal-Request-Id returns an old capture from another authorization.
+    assert.equal(cap.links.find((l: { rel: string }) => l.rel === 'up').href.split('/').pop(), h.authorization_id, `hold ${h.id} capture belongs to another authorization`);
+    assert.equal(auth.status, 'CAPTURED', `hold ${h.id} authorization is ${auth.status}`);
   } else {
     assert.equal(auth.status, 'VOIDED', `hold ${h.id} is ${auth.status}`);
   }

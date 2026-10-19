@@ -18,7 +18,8 @@ async function accessToken(): Promise<string> {
   return token.value;
 }
 
-// requestId -> PayPal-Request-Id, so a retried capture/void can't run twice.
+// requestId -> PayPal-Request-Id, so a retried capture/void can't run twice. PayPal remembers it
+// across runs: build it from PayPal IDs, never local DB ids (those restart when the DB is wiped).
 // ponytail: responses typed `any`; add PayPal response types if field typos start biting.
 export async function paypal(method: string, path: string, body?: unknown, requestId?: string): Promise<any> {
   const res = await fetch(API + path, {

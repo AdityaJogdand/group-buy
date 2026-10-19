@@ -55,6 +55,7 @@ Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties
 - [ ] Live deal page: progress bar, countdown, price as buyers join
 - [ ] Negotiation transcript, streaming
 - [ ] Seller dashboard in AG Grid: buyers, holds, status, PayPal IDs
+- [ ] Seller products: edit in AG Grid cells + "Add product" form (name, description, list, floor, tiers); seed in `lib/deals.ts` stays for demo resets
 - [ ] Audit trail in AG Grid
 - [ ] "Run demo" button: seeded product, simulated buyers, demo clock
 - [ ] **Nov 4: deployed on Render**

@@ -5,8 +5,15 @@ import { paypal } from './paypal.ts';
 
 export type DealStatus = 'OPEN' | 'CLOSING' | 'CAPTURED' | 'EXPIRED';
 export type HoldStatus = 'PENDING' | 'HELD' | 'CAPTURED' | 'CAPTURE_FAILED' | 'DROPPED' | 'LEFT' | 'VOIDED' | 'EXPIRED';
+export type Tier = { buyers: number; price_cents: number };
+export type Product = {
+  id: string; seller: string; name: string; description: string;
+  list_cents: number; floor_cents: number; tiers: Tier[];
+};
+// `product` is the product's name (joined in getDeal). list/floor are copied at open,
+// so a seller editing prices later can't change a deal people already joined.
 export type Deal = {
-  id: number; product: string; list_cents: number; floor_cents: number;
+  id: number; product_id: string; product: string; list_cents: number; floor_cents: number;
   target: number; status: DealStatus; price_cents: number | null; closes_at: string;
 };
 export type Hold = {
@@ -16,8 +23,12 @@ export type Hold = {
 
 export const db = new DatabaseSync(process.env.DB_PATH ?? 'groupbuy.db');
 db.exec(`
+  create table if not exists products (
+    id text primary key, seller text not null, name text not null, description text not null,
+    list_cents int not null, floor_cents int not null, tiers_json text not null,
+    check (floor_cents > 0 and floor_cents <= list_cents));
   create table if not exists deals (
-    id integer primary key, product text not null, list_cents int not null, floor_cents int not null,
+    id integer primary key, product_id text not null references products, list_cents int not null, floor_cents int not null,
     target int not null, status text not null default 'OPEN', price_cents int, closes_at text not null);
   create table if not exists holds (
     id integer primary key, deal_id int not null references deals, buyer text not null, max_cents int not null,
@@ -29,7 +40,32 @@ db.exec(`
 const usd = (cents: number) => (cents / 100).toFixed(2);
 const log = (dealId: number, type: string, data: object) =>
   db.prepare('insert into events (deal_id, type, data) values (?, ?, ?)').run(dealId, type, JSON.stringify(data));
-export const getDeal = (id: number) => db.prepare('select * from deals where id = ?').get(id) as Deal | undefined;
+// Demo catalog. `insert or ignore`: re-seeding on every boot never duplicates or overwrites seller edits.
+// ponytail: seed lives in code; move to a seller form when the dashboard edits products.
+const CATALOG: Product[] = [
+  { id: 'ux-course', seller: 'Lena', name: 'UX Design Course',
+    description: '8-week online course in user research, wireframing and prototyping.',
+    list_cents: 20000, floor_cents: 12000, tiers: [{ buyers: 10, price_cents: 18000 }, { buyers: 20, price_cents: 16000 }] },
+  { id: 'design-seat', seller: 'Lena', name: 'Design software seat (1 year)',
+    description: 'One-year license seat for a professional design and prototyping app.',
+    list_cents: 12000, floor_cents: 7000, tiers: [{ buyers: 5, price_cents: 10500 }, { buyers: 20, price_cents: 9000 }] },
+  { id: 'design-workshop', seller: 'Lena', name: 'Live design workshop',
+    description: 'Two-day live online workshop on design systems with a senior designer.',
+    list_cents: 30000, floor_cents: 18000, tiers: [{ buyers: 10, price_cents: 26000 }, { buyers: 25, price_cents: 22000 }] },
+];
+const seed = db.prepare(`insert or ignore into products (id, seller, name, description, list_cents, floor_cents, tiers_json)
+  values (?, ?, ?, ?, ?, ?, ?)`);
+for (const p of CATALOG) seed.run(p.id, p.seller, p.name, p.description, p.list_cents, p.floor_cents, JSON.stringify(p.tiers));
+
+const toProduct = ({ tiers_json, ...p }: any): Product => ({ ...p, tiers: JSON.parse(tiers_json) });
+export const getProduct = (id: string) => {
+  const row = db.prepare('select * from products where id = ?').get(id);
+  return row && toProduct(row);
+};
+export const getProducts = () => db.prepare('select * from products order by id').all().map(toProduct);
+export const getDeal = (id: number) => db.prepare(
+  'select d.*, p.name as product from deals d join products p on p.id = d.product_id where d.id = ?',
+).get(id) as Deal | undefined;
 export const getHolds = (dealId: number) =>
   db.prepare('select * from holds where deal_id = ? order by id').all(dealId) as Hold[];
 const getHold = (where: 'id' | 'order_id', value: number | string) =>
@@ -45,14 +81,15 @@ const mustGetDeal = (id: number) => {
   return deal;
 };
 
-export function createDeal({ product, listCents, floorCents, target, closesAt }:
-  { product: string; listCents: number; floorCents: number; target: number; closesAt: Date }) {
-  if (!(floorCents > 0 && floorCents <= listCents && target > 0)) throw new Error('bad deal terms');
+export function createDeal({ productId, target, closesAt }: { productId: string; target: number; closesAt: Date }) {
+  const product = getProduct(productId);
+  if (!product) throw new Error(`unknown product ${productId}`);
+  if (!(Number.isInteger(target) && target > 0)) throw new Error('bad deal terms');
   const { lastInsertRowid } = db.prepare(
-    'insert into deals (product, list_cents, floor_cents, target, closes_at) values (?, ?, ?, ?, ?)',
-  ).run(product, listCents, floorCents, target, closesAt.toISOString());
+    'insert into deals (product_id, list_cents, floor_cents, target, closes_at) values (?, ?, ?, ?, ?)',
+  ).run(productId, product.list_cents, product.floor_cents, target, closesAt.toISOString());
   const id = Number(lastInsertRowid);
-  log(id, 'DEAL_OPENED', { product, listCents, target });
+  log(id, 'DEAL_OPENED', { productId, listCents: product.list_cents, target });
   return id;
 }
 
@@ -88,7 +125,7 @@ export async function authorizeHold(orderId: string): Promise<Hold> {
 }
 
 async function voidHold(hold: Hold, reason: 'LEFT' | 'DROPPED' | 'VOIDED') {
-  await paypal('POST', `/v2/payments/authorizations/${hold.authorization_id}/void`, {}, `void-${hold.id}`);
+  await paypal('POST', `/v2/payments/authorizations/${hold.authorization_id}/void`, {}, `void-${hold.authorization_id}`);
   setHold(hold.id, { status: reason });
   log(hold.deal_id, reason, { holdId: hold.id, authorizationId: hold.authorization_id });
 }
@@ -120,7 +157,7 @@ export async function closeDeal(dealId: number, priceCents: number): Promise<Dea
   for (const h of payers) {
     try {
       const cap = await paypal('POST', `/v2/payments/authorizations/${h.authorization_id}/capture`,
-        { amount: { currency_code: 'USD', value: usd(priceCents) }, final_capture: true }, `capture-${h.id}-${priceCents}`);
+        { amount: { currency_code: 'USD', value: usd(priceCents) }, final_capture: true }, `capture-${h.authorization_id}-${priceCents}`);
       setHold(h.id, { capture_id: cap.id, status: 'CAPTURED' });
       log(dealId, 'CAPTURED', { holdId: h.id, captureId: cap.id, amount: usd(priceCents) });
     } catch (e) {
