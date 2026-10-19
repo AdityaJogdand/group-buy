@@ -8,7 +8,9 @@ const say = (...texts: string[]): ChatMessage[] =>
   texts.map((content, i) => ({ role: i % 2 ? 'assistant' : 'user', content }));
 
 // expect: 'ask', or the fields that must match. deadline may list several acceptable dates.
-type Expect = 'ask' | { productId: string; maxCents: number; deadline?: (string | null)[] };
+type Expect = 'ask' | 'declined' | { productId: string; maxCents: number; deadline?: (string | null)[] };
+const MATCH_ASK = '$100 is below what a UX Design Course group deal can close at. The group price is $160 at 20 buyers. '
+  + 'Can you go up to $160? You only pay the final group price, never more than your hold.';
 const cases: [string, ChatMessage[], Expect][] = [
   ['clear request', say('a UX course, under $160, before December'),
     { productId: 'ux-course', maxCents: 16000, deadline: ['2026-11-30', '2026-12-01'] }],
@@ -23,10 +25,14 @@ const cases: [string, ChatMessage[], Expect][] = [
   ['follow-up', say('a UX course', "What's the most you'd pay for UX Design Course? (list price $200)", '$150'),
     { productId: 'ux-course', maxCents: 15000 }],
   ['two products', say('the workshop and a software seat, $300 total'), 'ask'],
+  // Below-floor follow-ups (grouping asks the buyer to match the group price).
+  ['accepts match', say('UX course, $100', MATCH_ASK, 'yes ok'), { productId: 'ux-course', maxCents: 16000 }],
+  ['counter price', say('UX course, $100', MATCH_ASK, 'I can do 130'), { productId: 'ux-course', maxCents: 13000 }],
+  ['declines', say('UX course, $100', MATCH_ASK, 'no thanks, too much for me'), 'declined'],
 ];
 
 const passes = (got: IntakeResult, want: Expect) =>
-  want === 'ask' ? 'ask' in got
+  want === 'ask' || want === 'declined' ? want in got
     : 'productId' in got && got.productId === want.productId && got.maxCents === want.maxCents
       && (!want.deadline || want.deadline.includes(got.deadline));
 
