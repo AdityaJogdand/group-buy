@@ -43,6 +43,7 @@ Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties
 - [ ] Grouping: join an open deal or open a new one
 - [ ] Negotiation: buyer-pool agent vs seller agent, max 4 rounds, transcript stored
 - [ ] Code guard: price within `[floor, list]` and ≤ every captured hold
+- [ ] MCP server: `find_deal`, `join_deal` (returns the PayPal approval link; a human still approves), `deal_status`, `leave_deal`; Streamable HTTP, deployed with the app. PayPal Agent Toolkit 1.11 has `create_order` but no authorize/capture/void tools, so the hold logic stays in `lib/deals.ts`
 - [ ] Test sets: 30 buyer requests with expected parse; 50 negotiation runs
 - [ ] Results table for README and video
 

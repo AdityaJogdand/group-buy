@@ -12,9 +12,13 @@ const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 // Only public fields reach the model: never floor or tiers, the buyer could get them echoed back.
 export function systemPrompt(products: Product[], today: Date) {
-  const weekday = today.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+  const weekday = (d: Date) => d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+  // Models are bad at weekday math; give them a calendar to look dates up in.
+  const calendar = Array.from({ length: 14 }, (_, i) => new Date(today.getTime() + (i + 1) * 86_400_000))
+    .map(d => `${isoDate(d)} ${weekday(d)}`).join(', ');
   return `You turn a buyer's chat into a purchase request for a group-buy service.
-Today is ${isoDate(today)} (${weekday}).
+Today is ${isoDate(today)} (${weekday(today)}). Next 14 days: ${calendar}.
+"This Friday" is the first Friday after today; "next Friday" is the one after that.
 
 Catalog (id: name, list price - description):
 ${products.map(p => `- ${p.id}: ${p.name}, ${usd(p.list_cents)} - ${p.description}`).join('\n')}

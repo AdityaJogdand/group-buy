@@ -2,7 +2,9 @@
 // Set LLM_BASE_URL, LLM_MODEL, LLM_API_KEY in .env.
 export type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
-export async function llmJson<T>(system: string, messages: ChatMessage[], name: string, schema: object): Promise<T> {
+// Free tiers rate-limit per minute (Groq: 8K tokens/min). Groq's retry-after (~3s) is optimistic while the
+// token budget refills over ~60s, so back off 2, 4, 8, 16, 30s (~1 min total) before giving up.
+export async function llmJson<T>(system: string, messages: ChatMessage[], name: string, schema: object, attempt = 0): Promise<T> {
   const { LLM_BASE_URL: base, LLM_MODEL: model, LLM_API_KEY: key } = process.env;
   if (!base || !model) throw new Error('LLM_BASE_URL / LLM_MODEL missing');
   let res: Response;
@@ -20,6 +22,11 @@ export async function llmJson<T>(system: string, messages: ChatMessage[], name: 
     });
   } catch (e) {
     throw new Error('LLM unavailable, try again', { cause: e });
+  }
+  if (res.status === 429 && attempt < 5) {
+    const wait = Math.min(Math.max(Number(res.headers.get('retry-after')) || 0, 2 ** (attempt + 1)), 30);
+    await new Promise(r => setTimeout(r, wait * 1000));
+    return llmJson(system, messages, name, schema, attempt + 1);
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`LLM unavailable, try again (${res.status} ${data.error?.message ?? ''})`.trim());
