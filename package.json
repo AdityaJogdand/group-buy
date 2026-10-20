@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:money": "node --no-warnings --env-file=.env scripts/test-money-path.ts",
-    "test:clock": "CLOCK_SPEED=4320 node --no-warnings --env-file=.env scripts/test-clock.ts",
+    "test:money": "DB_PATH=:memory: node --no-warnings --env-file=.env scripts/test-money-path.ts",
+    "test:clock": "DB_PATH=:memory: CLOCK_SPEED=4320 node --no-warnings --env-file=.env scripts/test-clock.ts",
     "test:intake": "node --no-warnings --env-file=.env scripts/test-intake.ts",
-    "chat": "node --no-warnings --env-file=.env scripts/chat-intake.ts",
+    "chat": "DB_PATH=:memory: node --no-warnings --env-file=.env scripts/chat-intake.ts",
     "test:grouping": "DB_PATH=:memory: node --no-warnings scripts/test-grouping.ts",
     "typecheck": "tsc",
     "server": "node --no-warnings --env-file=.env server.ts",

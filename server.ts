@@ -35,11 +35,13 @@ export const server = new FastMCP({
 
 server.addTool({
   name: 'find_deal',
-  description: 'List products (id, name, list price, description) and the open group deals for each.',
+  description: 'List products (id, name, list price, group prices by buyer count, description) and the open group deals for each.',
   annotations: { readOnlyHint: true },
   parameters: z.object({ product_id: z.string().optional().describe('only this product') }),
   execute: async ({ product_id }) => json(getProducts().filter(p => !product_id || p.id === product_id).map(p => ({
     id: p.id, name: p.name, list_price: usd(p.list_cents), description: p.description,
+    // Tiers are public (join_deal already quotes the first one); the floor never leaves the server.
+    group_prices: p.tiers.map(t => ({ buyers: t.buyers, price: usd(t.price_cents) })),
     open_deals: (db.prepare("select id from deals where product_id = ? and status = 'OPEN' and closes_at > ?")
       .all(p.id, now().toISOString()) as { id: number }[])
       .map(({ id }) => ({ deal_id: id, buyers: heldCount(id), target: getDeal(id)!.target, closes_at: getDeal(id)!.closes_at })),
@@ -116,8 +118,9 @@ server.getApp().get('/paypal/return', async c => {
   }
 });
 
+// Stateless: no sessions to lose, so a server restart never strands a connected client.
 if (import.meta.main) {
   startClock();
-  await server.start({ transportType: 'httpStream', httpStream: { port: PORT } });
+  await server.start({ transportType: 'httpStream', httpStream: { port: PORT, stateless: true } });
   console.error(`group-buy MCP on ${BASE_URL}/mcp`);
 }

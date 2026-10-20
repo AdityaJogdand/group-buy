@@ -24,7 +24,10 @@ assert.deepEqual(tools.map(t => t.name).sort(), ['deal_status', 'find_deal', 'jo
 
 const catalog = await call('find_deal', {});
 assert.ok(catalog.some((p: { id: string }) => p.id === 'ux-course'));
-assert.ok(!JSON.stringify(catalog).includes('floor'));
+const ux = JSON.stringify(catalog.find((p: { id: string }) => p.id === 'ux-course'));
+assert.ok(!JSON.stringify(catalog).includes('floor') && !ux.includes('$120'));
+assert.deepEqual(catalog.find((p: { id: string }) => p.id === 'ux-course').group_prices,
+  [{ buyers: 10, price: '$180' }, { buyers: 20, price: '$160' }]);
 
 const low = await call('join_deal', { product_id: 'ux-course', max_usd: 100 });
 assert.match(low.question, /\$180 at 10 buyers/);

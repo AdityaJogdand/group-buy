@@ -42,6 +42,7 @@ const log = (dealId: number, type: string, data: object) =>
   db.prepare('insert into events (deal_id, type, data) values (?, ?, ?)').run(dealId, type, JSON.stringify(data));
 // Demo catalog. `insert or ignore`: re-seeding on every boot never duplicates or overwrites seller edits.
 // ponytail: seed lives in code; move to a seller form when the dashboard edits products.
+// Sellers and products are made up; no real brands.
 const CATALOG: Product[] = [
   { id: 'ux-course', seller: 'Lena', name: 'UX Design Course',
     description: '8-week online course in user research, wireframing and prototyping.',
@@ -52,6 +53,18 @@ const CATALOG: Product[] = [
   { id: 'design-workshop', seller: 'Lena', name: 'Live design workshop',
     description: 'Two-day live online workshop on design systems with a senior designer.',
     list_cents: 30000, floor_cents: 18000, tiers: [{ buyers: 10, price_cents: 26000 }, { buyers: 25, price_cents: 22000 }] },
+  { id: 'headphones', seller: 'Sound Supply', name: 'Noise-cancelling headphones',
+    description: 'Over-ear wireless headphones with active noise cancelling and 30-hour battery.',
+    list_cents: 35000, floor_cents: 23000, tiers: [{ buyers: 10, price_cents: 30000 }, { buyers: 25, price_cents: 27000 }] },
+  { id: 'keyboard', seller: 'KeyLab', name: 'Mechanical keyboard (75%)',
+    description: 'Compact 75% mechanical keyboard, hot-swappable switches, wireless and USB-C.',
+    list_cents: 15000, floor_cents: 9500, tiers: [{ buyers: 10, price_cents: 13000 }, { buyers: 30, price_cents: 11500 }] },
+  { id: 'monitor', seller: 'Pixel Works', name: '27-inch 4K monitor',
+    description: '27-inch 4K IPS monitor with USB-C power delivery, for work and design.',
+    list_cents: 40000, floor_cents: 28000, tiers: [{ buyers: 5, price_cents: 36000 }, { buyers: 15, price_cents: 33000 }] },
+  { id: 'coffee-beans', seller: 'Roastery Row', name: 'Specialty coffee beans (1 kg)',
+    description: 'Freshly roasted single-origin coffee beans, 1 kg bag, whole bean or ground.',
+    list_cents: 4000, floor_cents: 2400, tiers: [{ buyers: 20, price_cents: 3400 }, { buyers: 50, price_cents: 3000 }] },
 ];
 const seed = db.prepare(`insert or ignore into products (id, seller, name, description, list_cents, floor_cents, tiers_json)
   values (?, ?, ?, ?, ?, ?, ?)`);

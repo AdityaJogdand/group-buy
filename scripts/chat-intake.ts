@@ -1,5 +1,5 @@
 // Try intake + grouping by hand: type buyer messages, see what the agent asks or which deal it picks.
-// Run: npm run chat   (empty line, Ctrl+C or Ctrl+D to quit). Opens real deals in groupbuy.db.
+// Run: npm run chat   (empty line, Ctrl+C or Ctrl+D to quit). Uses a throwaway in-memory DB.
 import { createInterface } from 'node:readline';
 import { intake } from '../lib/intake.ts';
 import { group } from '../lib/grouping.ts';
