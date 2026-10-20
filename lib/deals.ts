@@ -68,7 +68,7 @@ export const getDeal = (id: number) => db.prepare(
 ).get(id) as Deal | undefined;
 export const getHolds = (dealId: number) =>
   db.prepare('select * from holds where deal_id = ? order by id').all(dealId) as Hold[];
-const getHold = (where: 'id' | 'order_id', value: number | string) =>
+export const getHold = (where: 'id' | 'order_id', value: number | string) =>
   db.prepare(`select * from holds where ${where} = ?`).get(value) as Hold | undefined;
 const setHold = (id: number, fields: Partial<Hold>) => {
   const keys = Object.keys(fields);

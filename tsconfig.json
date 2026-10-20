@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["lib", "scripts"]
+  "include": ["lib", "scripts", "server.ts"]
 }
