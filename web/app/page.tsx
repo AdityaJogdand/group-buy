@@ -1,4 +1,5 @@
 import { Hero } from "./hero";
+import { CopyCommand } from "./copy-command";
 
 const steps = [
   { n: "01", title: "Pick a group", body: "Each group has a deadline, a solo price, and cheaper prices as more buyers join." },
@@ -16,6 +17,14 @@ const groups = [
 
 const panel = "mx-3 mt-3 rounded-[28px] px-6 py-20 sm:mx-6 sm:mt-4 sm:px-16 sm:py-24";
 const h2 = "condensed text-[clamp(2.75rem,6vw,5rem)] uppercase leading-[0.92]";
+
+function Tool({ name }: { name: string }) {
+  return (
+    <p className="flex items-center gap-2 text-sm font-semibold text-muted">
+      <span className="size-1.5 rounded-full bg-ink/40" /> Used group-buy · <code className="text-ink">{name}</code>
+    </p>
+  );
+}
 
 function GroupCard({ g }: { g: (typeof groups)[number] }) {
   const price = g.tiers.reduce((p, t) => (g.buyers >= t.buyers ? t.price : p), g.list);
@@ -52,7 +61,6 @@ export default function Landing() {
             <a href="#top" className="wordmark text-xl sm:text-2xl">GROUP/BUY</a>
             <div className="flex items-center gap-8 text-lg font-medium">
               <a href="#how" className="hidden hover:opacity-60 md:inline">How it works</a>
-              <a href="#sellers" className="hidden hover:opacity-60 md:inline">Sellers</a>
               <a href="#groups" className="press whitespace-nowrap rounded-full bg-ink px-4 py-2 text-base font-semibold text-lime sm:px-6 sm:py-3 sm:text-lg">Join a group</a>
             </div>
           </nav>
@@ -87,29 +95,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Sellers */}
-      <section id="sellers" className={`${panel} scroll-mt-4 bg-white`}>
-        <div className="grid items-end gap-14 md:grid-cols-2">
-          <div>
-            <h2 className={h2}>Volume,<br />without the<br />ad spend.</h2>
-            <p className="mt-8 max-w-md text-xl text-muted">
-              Set a solo price and group prices. Buyers fill the group for you. Your lowest price stays private, and
-              agents never go below it.
-            </p>
-          </div>
-          <div className="flex items-end gap-3 sm:gap-5">
-            {[{ l: "Solo", p: 150 }, { l: "10 buyers", p: 130 }, { l: "30 buyers", p: 115 }].map(t => (
-              <div key={t.l} className="flex flex-1 flex-col">
-                <span className="condensed text-4xl tabular-nums sm:text-5xl">${t.p}</span>
-                {/* Bars start at $100 so the drop is visible. */}
-                <span className={`mt-3 rounded-2xl ${t.p === 150 ? "bg-black/10" : "bg-lime"}`} style={{ height: `${((t.p - 100) / 50) * 200}px` }} />
-                <span className="mt-3 text-sm font-semibold uppercase tracking-[0.08em]">{t.l}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* The guarantee */}
       <section className={`${panel} bg-ink text-lime`}>
         <p className="text-sm font-semibold uppercase tracking-[0.14em] opacity-70">The guarantee</p>
@@ -126,14 +111,47 @@ export default function Landing() {
 
       {/* Claude / MCP */}
       <section id="claude" className={`${panel} bg-white`}>
-        <h2 className={h2}>Ask your AI.<br />It joins for you.</h2>
-        <p className="mt-8 max-w-xl text-xl">
-          Group Buy is an MCP server. Connect it to Claude and tell it what you want and the most you’d pay. You approve the hold
-          in PayPal.
-        </p>
-        <code className="mt-10 block max-w-full overflow-x-auto whitespace-nowrap rounded-2xl bg-ink px-6 py-4 text-sm text-lime sm:inline-block">
-          claude mcp add --transport http group-buy http://localhost:3000/mcp
-        </code>
+        <div className="grid items-center gap-14 lg:grid-cols-2">
+          <div>
+            <h2 className={h2}>Ask your AI.<br />It joins for you.</h2>
+            <p className="mt-8 max-w-lg text-xl">
+              Group Buy is an MCP server. Your assistant finds the group, places the hold request, and you approve it in
+              PayPal. No site to browse.
+            </p>
+            <ol className="mt-10 grid max-w-lg gap-4 text-lg">
+              {["Copy the command into your terminal.", "Ask Claude for what you want and the most you'd pay.", "Approve the hold in PayPal. Done."].map((t, i) => (
+                <li key={t} className="flex items-baseline gap-4">
+                  <span className="condensed w-6 shrink-0 text-2xl">{i + 1}</span><span>{t}</span>
+                </li>
+              ))}
+            </ol>
+            <div className="mt-8 max-w-lg">
+              <CopyCommand command="claude mcp add --transport http group-buy http://localhost:3000/mcp" />
+            </div>
+          </div>
+
+          {/* What it looks like in Claude */}
+          <div className="rounded-[24px] bg-bg p-4 sm:p-6" aria-label="Example conversation with Claude">
+            <div className="grid gap-3 text-[1.0625rem]">
+              <p className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-ink px-4 py-3 text-white">
+                Find me noise-cancelling headphones in a group deal.
+              </p>
+              <Tool name="find_deal" />
+              <p className="max-w-[90%] rounded-2xl rounded-bl-md bg-white px-4 py-3">
+                One group is filling: <b>14 of 25 buyers</b>, ends in 2 days. The price drops at 25. What&apos;s the most
+                you&apos;d pay?
+              </p>
+              <p className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-ink px-4 py-3 text-white">
+                Hold up to the solo price.
+              </p>
+              <Tool name="join_deal" />
+              <div className="max-w-[90%] rounded-2xl rounded-bl-md bg-white px-4 py-3">
+                <p>You&apos;re in. Approve the hold and you&apos;ll pay the group price when it closes, never more.</p>
+                <span className="mt-3 inline-block rounded-full bg-lime px-4 py-2 text-sm font-bold">Approve in PayPal →</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <footer className="mx-3 mb-3 mt-3 flex flex-wrap items-center justify-between gap-4 rounded-[28px] bg-lime px-6 py-8 sm:mx-6 sm:mb-6 sm:mt-4 sm:px-16">
