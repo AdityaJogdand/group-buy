@@ -1,5 +1,6 @@
 import { Hero } from "./hero";
 import { CopyCommand } from "./copy-command";
+import Image from "next/image";
 
 const steps = [
   { n: "01", title: "Pick a group", body: "Each group has a deadline, a solo price, and cheaper prices as more buyers join." },
@@ -9,13 +10,14 @@ const steps = [
 ];
 
 // Demo snapshot of the seeded catalog (lib/deals.ts); `buyers` is illustrative until the API is wired.
+// Photos in public/products are from Unsplash (free license), picked with no visible brand logos.
 const groups = [
-  { tag: "Audio", ends: "2d 14h", name: "Noise-cancelling headphones", list: 350, tiers: [{ buyers: 10, price: 300 }, { buyers: 25, price: 270 }], buyers: 14 },
-  { tag: "Desk", ends: "19h", name: "Mechanical keyboard (75%)", list: 150, tiers: [{ buyers: 10, price: 130 }, { buyers: 30, price: 115 }], buyers: 27 },
-  { tag: "Display", ends: "1d 6h", name: "27-inch 4K monitor", list: 400, tiers: [{ buyers: 5, price: 360 }, { buyers: 15, price: 330 }], buyers: 3 },
-  { tag: "Course", ends: "3d", name: "UX Design Course", list: 200, tiers: [{ buyers: 10, price: 180 }, { buyers: 20, price: 160 }], buyers: 17 },
-  { tag: "Software", ends: "11h", name: "Design software seat (1 year)", list: 120, tiers: [{ buyers: 5, price: 105 }, { buyers: 20, price: 90 }], buyers: 9 },
-  { tag: "Workshop", ends: "2d 2h", name: "Live design workshop", list: 300, tiers: [{ buyers: 10, price: 260 }, { buyers: 25, price: 220 }], buyers: 6 },
+  { tag: "Audio", ends: "2d 14h", name: "Noise-cancelling headphones", seller: "Sound Supply", list: 350, tiers: [{ buyers: 10, price: 300 }, { buyers: 25, price: 270 }], buyers: 14 },
+  { tag: "Desk", ends: "19h", name: "Mechanical keyboard (75%)", seller: "KeyLab", list: 150, tiers: [{ buyers: 10, price: 130 }, { buyers: 30, price: 115 }], buyers: 27 },
+  { tag: "Display", ends: "1d 6h", name: "27-inch 4K monitor", seller: "Pixel Works", list: 400, tiers: [{ buyers: 5, price: 360 }, { buyers: 15, price: 330 }], buyers: 3 },
+  { tag: "Course", ends: "3d", name: "UX Design Course", seller: "Lena", list: 200, tiers: [{ buyers: 10, price: 180 }, { buyers: 20, price: 160 }], buyers: 17 },
+  { tag: "Software", ends: "11h", name: "Design software seat (1 year)", seller: "Lena", list: 120, tiers: [{ buyers: 5, price: 105 }, { buyers: 20, price: 90 }], buyers: 9 },
+  { tag: "Workshop", ends: "2d 2h", name: "Live design workshop", seller: "Lena", list: 300, tiers: [{ buyers: 10, price: 260 }, { buyers: 25, price: 220 }], buyers: 6 },
 ];
 
 // Tall panels, content centered vertically.
@@ -32,28 +34,41 @@ function Tool({ name }: { name: string }) {
   );
 }
 
+// Apple-store style showcase card: name up top, product art center stage, price and action at the bottom.
 function GroupCard({ g }: { g: (typeof groups)[number] }) {
   const price = g.tiers.reduce((p, t) => (g.buyers >= t.buyers ? t.price : p), g.list);
   const next = g.tiers.find(t => t.buyers > g.buyers);
   const seats = g.tiers.at(-1)!.buyers;
   return (
-    <article className="flex flex-col rounded-[24px] border-2 border-ink p-6 sm:p-7">
-      <div className="flex justify-between text-sm font-semibold uppercase tracking-[0.08em]">
-        <span>{g.tag}</span><span>{g.ends}</span>
+    <article className="group flex flex-col rounded-[28px] bg-[#f5f5f7] p-7 transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_18px_44px_rgba(0,0,0,0.14)] sm:p-8">
+      <p className="text-sm font-semibold text-muted">{g.tag} · ends in {g.ends}</p>
+      <h3 className="mt-1.5 text-balance md:min-h-[2.2em] text-[1.75rem] font-bold leading-[1.1] tracking-[-0.02em]">{g.name}</h3>
+      <p className="mt-1 text-lg text-muted">by {g.seller}</p>
+
+      <div className="my-7 overflow-hidden rounded-[20px]">
+        <Image src={`/products/${g.tag.toLowerCase()}.jpg`} alt={g.name} width={900} height={675}
+          sizes="(min-width: 768px) 30vw, 90vw"
+          className="aspect-[4/3] w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" />
       </div>
-      <h3 className="mt-4 text-2xl font-bold tracking-tight">{g.name}</h3>
-      <p className="mt-4 flex items-baseline gap-3">
-        <span className="condensed text-6xl leading-none tabular-nums">${price}</span>
-        {price < g.list && <s className="text-lg font-bold tabular-nums">${g.list}</s>}
-      </p>
-      <div className="mt-6 grid grid-cols-15 gap-1" role="img" aria-label={`${g.buyers} of ${seats} buyers`}>
+
+      <div className="mt-auto">
+      <div className="grid grid-cols-15 gap-[3px]" role="img" aria-label={`${g.buyers} of ${seats} buyers`}>
         {Array.from({ length: seats }, (_, i) => (
-          <span key={i} className={`aspect-square rounded-[4px] border-[1.5px] border-ink ${i < g.buyers ? "bg-ink" : ""}`} />
+          <span key={i} className={`aspect-square rounded-[3px] ${i < g.buyers ? "bg-ink" : "bg-ink/10"}`} />
         ))}
       </div>
-      <p className="mt-5 font-semibold">
-        {next ? `${next.buyers - g.buyers} more unlock $${next.price} for everyone` : "Best price unlocked"}
+      <p className="mt-3 text-base text-muted">
+        {g.buyers} joined · {next ? `${next.buyers - g.buyers} more unlock $${next.price}` : "best price unlocked"}
       </p>
+
+      <div className="flex items-end justify-between gap-4 pt-7">
+        <p className="leading-tight">
+          <span className="block text-3xl font-bold tabular-nums tracking-tight">${price}</span>
+          <span className="text-base text-muted">{price < g.list ? <>each · <s>${g.list}</s> solo</> : "solo price"}</span>
+        </p>
+        <a href="#claude" className="press rounded-full bg-ink px-6 py-3 text-base font-semibold text-white">Join</a>
+      </div>
+      </div>
     </article>
   );
 }
@@ -91,7 +106,7 @@ export default function Landing() {
       </section>
 
       {/* Filling now */}
-      <section id="groups" className={`${panel} scroll-mt-4 bg-lime`}>
+      <section id="groups" className={`${panel} scroll-mt-4 bg-white`}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <h2 className={h2}>Filling now</h2>
           <a href="#claude" className="text-lg font-bold underline decoration-2 underline-offset-4 hover:opacity-60">See all groups →</a>
