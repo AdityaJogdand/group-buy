@@ -12,9 +12,9 @@ export function CopyCommand({ command }: { command: string }) {
   };
   return (
     <div className="flex items-center gap-3 rounded-2xl bg-ink py-2 pl-5 pr-2 text-lime">
-      <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap py-2 text-sm">{command}</code>
+      <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap py-2.5 text-base">{command}</code>
       <button type="button" onClick={copy}
-        className="press shrink-0 rounded-xl bg-lime px-4 py-2 text-sm font-bold text-ink" aria-live="polite">
+        className="press shrink-0 rounded-xl bg-lime px-5 py-2.5 text-base font-bold text-ink" aria-live="polite">
         {copied ? "Copied ✓" : "Copy"}
       </button>
     </div>

@@ -13,14 +13,20 @@ const groups = [
   { tag: "Audio", ends: "2d 14h", name: "Noise-cancelling headphones", list: 350, tiers: [{ buyers: 10, price: 300 }, { buyers: 25, price: 270 }], buyers: 14 },
   { tag: "Desk", ends: "19h", name: "Mechanical keyboard (75%)", list: 150, tiers: [{ buyers: 10, price: 130 }, { buyers: 30, price: 115 }], buyers: 27 },
   { tag: "Display", ends: "1d 6h", name: "27-inch 4K monitor", list: 400, tiers: [{ buyers: 5, price: 360 }, { buyers: 15, price: 330 }], buyers: 3 },
+  { tag: "Course", ends: "3d", name: "UX Design Course", list: 200, tiers: [{ buyers: 10, price: 180 }, { buyers: 20, price: 160 }], buyers: 17 },
+  { tag: "Software", ends: "11h", name: "Design software seat (1 year)", list: 120, tiers: [{ buyers: 5, price: 105 }, { buyers: 20, price: 90 }], buyers: 9 },
+  { tag: "Workshop", ends: "2d 2h", name: "Live design workshop", list: 300, tiers: [{ buyers: 10, price: 260 }, { buyers: 25, price: 220 }], buyers: 6 },
 ];
 
-const panel = "mx-3 mt-3 rounded-[28px] px-6 py-20 sm:mx-6 sm:mt-4 sm:px-16 sm:py-24";
+// Tall panels, content centered vertically.
+// The steps panel keeps its original, shorter height.
+const panelShort = "mx-3 mt-3 rounded-[28px] px-6 py-20 sm:mx-6 sm:mt-4 sm:px-16 sm:py-24";
+const panel = "mx-3 mt-3 flex min-h-[85svh] flex-col justify-center rounded-[28px] px-6 py-28 sm:mx-6 sm:mt-4 sm:px-16 sm:py-36";
 const h2 = "condensed text-[clamp(2.75rem,6vw,5rem)] uppercase leading-[0.92]";
 
 function Tool({ name }: { name: string }) {
   return (
-    <p className="flex items-center gap-2 text-sm font-semibold text-muted">
+    <p className="flex items-center gap-2 text-base font-semibold text-muted">
       <span className="size-1.5 rounded-full bg-ink/40" /> Used group-buy · <code className="text-ink">{name}</code>
     </p>
   );
@@ -71,7 +77,7 @@ export default function Landing() {
       </div>
 
       {/* Four steps */}
-      <section id="how" className={`${panel} scroll-mt-4 bg-ink`}>
+      <section id="how" className={`${panelShort} scroll-mt-4 bg-ink`}>
         <h2 className={`${h2} text-lime`}>Four steps. No risk.</h2>
         <ol className="mt-14 grid gap-12 border-t-2 border-lime pt-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10">
           {steps.map(s => (
@@ -111,28 +117,28 @@ export default function Landing() {
 
       {/* Claude / MCP */}
       <section id="claude" className={`${panel} bg-white`}>
-        <div className="grid items-center gap-14 lg:grid-cols-2">
+        <div className="grid items-center gap-14 lg:grid-cols-2 [&>*]:min-w-0">
           <div>
-            <h2 className={h2}>Ask your AI.<br />It joins for you.</h2>
-            <p className="mt-8 max-w-lg text-xl">
+            <h2 className="condensed text-[clamp(3rem,5.6vw,5.5rem)] uppercase leading-[0.9]">Ask your AI.<br />It joins for you.</h2>
+            <p className="mt-8 max-w-xl text-2xl leading-snug">
               Group Buy is an MCP server. Your assistant finds the group, places the hold request, and you approve it in
               PayPal. No site to browse.
             </p>
-            <ol className="mt-10 grid max-w-lg gap-4 text-lg">
+            <ol className="mt-10 grid max-w-xl gap-5 text-xl sm:text-2xl">
               {["Copy the command into your terminal.", "Ask Claude for what you want and the most you'd pay.", "Approve the hold in PayPal. Done."].map((t, i) => (
                 <li key={t} className="flex items-baseline gap-4">
-                  <span className="condensed w-6 shrink-0 text-2xl">{i + 1}</span><span>{t}</span>
+                  <span className="condensed w-8 shrink-0 text-3xl">{i + 1}</span><span>{t}</span>
                 </li>
               ))}
             </ol>
-            <div className="mt-8 max-w-lg">
+            <div className="mt-10 max-w-xl">
               <CopyCommand command="claude mcp add --transport http group-buy http://localhost:3000/mcp" />
             </div>
           </div>
 
           {/* What it looks like in Claude */}
           <div className="rounded-[24px] bg-bg p-4 sm:p-6" aria-label="Example conversation with Claude">
-            <div className="grid gap-3 text-[1.0625rem]">
+            <div className="grid gap-4 text-lg sm:text-xl">
               <p className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-ink px-4 py-3 text-white">
                 Find me noise-cancelling headphones in a group deal.
               </p>
@@ -147,7 +153,7 @@ export default function Landing() {
               <Tool name="join_deal" />
               <div className="max-w-[90%] rounded-2xl rounded-bl-md bg-white px-4 py-3">
                 <p>You&apos;re in. Approve the hold and you&apos;ll pay the group price when it closes, never more.</p>
-                <span className="mt-3 inline-block rounded-full bg-lime px-4 py-2 text-sm font-bold">Approve in PayPal →</span>
+                <span className="mt-4 inline-block rounded-full bg-lime px-5 py-2.5 text-base font-bold">Approve in PayPal →</span>
               </div>
             </div>
           </div>
