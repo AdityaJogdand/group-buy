@@ -1,12 +1,47 @@
 import { Hero } from "./hero";
 
 const steps = [
-  { n: "01", title: "Tell the agent.", body: "“Noise-cancelling headphones, max $310.” It finds the group that fits." },
-  { n: "02", title: "PayPal holds your max.", body: "Authorized, not charged. Leave any time before the group closes." },
-  { n: "03", title: "One price for everyone.", body: "The group fills and every hold is captured at the same lower price." },
+  { n: "01", title: "Pick a group", body: "Each group has a deadline, a solo price, and cheaper prices as more buyers join." },
+  { n: "02", title: "Hold your max", body: "PayPal places a hold for the most you'd pay. It's a hold, not a charge." },
+  { n: "03", title: "The group fills", body: "Every new buyer pushes the price down for everyone already in." },
+  { n: "04", title: "Everyone pays the same", body: "At the deadline, everyone pays the group price. If it misses the minimum, nobody pays." },
 ];
 
-const panel = "mx-3 mt-3 rounded-[28px] px-6 py-20 sm:mx-6 sm:mt-4 sm:px-16 sm:py-28";
+// Demo snapshot of the seeded catalog (lib/deals.ts); `buyers` is illustrative until the API is wired.
+const groups = [
+  { tag: "Audio", ends: "2d 14h", name: "Noise-cancelling headphones", list: 350, tiers: [{ buyers: 10, price: 300 }, { buyers: 25, price: 270 }], buyers: 14 },
+  { tag: "Desk", ends: "19h", name: "Mechanical keyboard (75%)", list: 150, tiers: [{ buyers: 10, price: 130 }, { buyers: 30, price: 115 }], buyers: 27 },
+  { tag: "Display", ends: "1d 6h", name: "27-inch 4K monitor", list: 400, tiers: [{ buyers: 5, price: 360 }, { buyers: 15, price: 330 }], buyers: 3 },
+];
+
+const panel = "mx-3 mt-3 rounded-[28px] px-6 py-20 sm:mx-6 sm:mt-4 sm:px-16 sm:py-24";
+const h2 = "condensed text-[clamp(2.75rem,6vw,5rem)] uppercase leading-[0.92]";
+
+function GroupCard({ g }: { g: (typeof groups)[number] }) {
+  const price = g.tiers.reduce((p, t) => (g.buyers >= t.buyers ? t.price : p), g.list);
+  const next = g.tiers.find(t => t.buyers > g.buyers);
+  const seats = g.tiers.at(-1)!.buyers;
+  return (
+    <article className="flex flex-col rounded-[24px] border-2 border-ink p-6 sm:p-7">
+      <div className="flex justify-between text-sm font-semibold uppercase tracking-[0.08em]">
+        <span>{g.tag}</span><span>{g.ends}</span>
+      </div>
+      <h3 className="mt-4 text-2xl font-bold tracking-tight">{g.name}</h3>
+      <p className="mt-4 flex items-baseline gap-3">
+        <span className="condensed text-6xl leading-none tabular-nums">${price}</span>
+        {price < g.list && <s className="text-lg font-bold tabular-nums">${g.list}</s>}
+      </p>
+      <div className="mt-6 grid grid-cols-15 gap-1" role="img" aria-label={`${g.buyers} of ${seats} buyers`}>
+        {Array.from({ length: seats }, (_, i) => (
+          <span key={i} className={`aspect-square rounded-[4px] border-[1.5px] border-ink ${i < g.buyers ? "bg-ink" : ""}`} />
+        ))}
+      </div>
+      <p className="mt-5 font-semibold">
+        {next ? `${next.buyers - g.buyers} more unlock $${next.price} for everyone` : "Best price unlocked"}
+      </p>
+    </article>
+  );
+}
 
 export default function Landing() {
   return (
@@ -18,7 +53,7 @@ export default function Landing() {
             <div className="flex items-center gap-8 text-lg font-medium">
               <a href="#how" className="hidden hover:opacity-60 md:inline">How it works</a>
               <a href="#sellers" className="hidden hover:opacity-60 md:inline">Sellers</a>
-              <a href="#how" className="press whitespace-nowrap rounded-full bg-ink px-4 py-2 text-base font-semibold text-lime sm:px-6 sm:py-3 sm:text-lg">Join a group</a>
+              <a href="#groups" className="press whitespace-nowrap rounded-full bg-ink px-4 py-2 text-base font-semibold text-lime sm:px-6 sm:py-3 sm:text-lg">Join a group</a>
             </div>
           </nav>
         </header>
@@ -27,39 +62,36 @@ export default function Landing() {
         </main>
       </div>
 
-      {/* The guarantee */}
-      <section className={`${panel} bg-ink text-lime`}>
-        <p className="text-sm font-semibold uppercase tracking-[0.14em] opacity-70">The guarantee</p>
-        <p className="condensed mt-6 text-[clamp(3rem,8vw,7rem)] uppercase leading-[0.9]">
-          Held <span className="tabular-nums">$310</span>.<br />
-          Charged <span className="tabular-nums">$300</span>.<br />
-          <span className="text-white/40">Or released. $0.</span>
-        </p>
-        <p className="mt-10 max-w-xl text-xl text-white/70">
-          Holds are PayPal authorizations, not payments. You&apos;re never charged more than your hold, and a group that
-          doesn&apos;t fill releases every hold.
-        </p>
-      </section>
-
-      {/* How it works */}
-      <section id="how" className={`${panel} scroll-mt-4 bg-white`}>
-        <h2 className="condensed text-[clamp(2.75rem,6vw,5rem)] uppercase leading-[0.92]">How it works.</h2>
-        <ol className="mt-16 grid gap-12 md:grid-cols-3 md:gap-10">
+      {/* Four steps */}
+      <section id="how" className={`${panel} scroll-mt-4 bg-ink`}>
+        <h2 className={`${h2} text-lime`}>Four steps. No risk.</h2>
+        <ol className="mt-14 grid gap-12 border-t-2 border-lime pt-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10">
           {steps.map(s => (
-            <li key={s.n} className="border-t-2 border-ink pt-6">
-              <span className="condensed text-5xl tabular-nums">{s.n}</span>
-              <h3 className="mt-4 text-2xl font-bold">{s.title}</h3>
-              <p className="mt-2 text-lg text-muted">{s.body}</p>
+            <li key={s.n}>
+              <span className="condensed text-7xl leading-none text-lime tabular-nums">{s.n}</span>
+              <h3 className="mt-6 text-2xl font-bold text-white">{s.title}</h3>
+              <p className="mt-3 text-lg text-white/70">{s.body}</p>
             </li>
           ))}
         </ol>
+      </section>
+
+      {/* Filling now */}
+      <section id="groups" className={`${panel} scroll-mt-4 bg-lime`}>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h2 className={h2}>Filling now</h2>
+          <a href="#claude" className="text-lg font-bold underline decoration-2 underline-offset-4 hover:opacity-60">See all groups →</a>
+        </div>
+        <div className="mt-12 grid gap-5 md:grid-cols-3">
+          {groups.map(g => <GroupCard key={g.name} g={g} />)}
+        </div>
       </section>
 
       {/* Sellers */}
       <section id="sellers" className={`${panel} scroll-mt-4 bg-white`}>
         <div className="grid items-end gap-14 md:grid-cols-2">
           <div>
-            <h2 className="condensed text-[clamp(2.75rem,6vw,5rem)] uppercase leading-[0.92]">Volume,<br />without the<br />ad spend.</h2>
+            <h2 className={h2}>Volume,<br />without the<br />ad spend.</h2>
             <p className="mt-8 max-w-md text-xl text-muted">
               Set a solo price and group prices. Buyers fill the group for you. Your lowest price stays private, and
               agents never go below it.
@@ -78,11 +110,25 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* The guarantee */}
+      <section className={`${panel} bg-ink text-lime`}>
+        <p className="text-sm font-semibold uppercase tracking-[0.14em] opacity-70">The guarantee</p>
+        <p className="condensed mt-6 text-[clamp(3rem,8vw,7rem)] uppercase leading-[0.9]">
+          Held: your max.<br />
+          Charged: the group price.<br />
+          <span className="text-white/40">Or released. Nothing paid.</span>
+        </p>
+        <p className="mt-10 max-w-xl text-xl text-white/70">
+          Holds are PayPal authorizations, not payments. You&apos;re never charged more than your hold, and a group that
+          doesn&apos;t fill releases every hold.
+        </p>
+      </section>
+
       {/* Claude / MCP */}
-      <section id="claude" className={`${panel} bg-lime`}>
-        <h2 className="condensed text-[clamp(2.75rem,6vw,5rem)] uppercase leading-[0.92]">Ask your AI.<br />It joins for you.</h2>
+      <section id="claude" className={`${panel} bg-white`}>
+        <h2 className={h2}>Ask your AI.<br />It joins for you.</h2>
         <p className="mt-8 max-w-xl text-xl">
-          Group Buy is an MCP server. Connect it to Claude and say “I want the headphones, max $310.” You approve the hold
+          Group Buy is an MCP server. Connect it to Claude and tell it what you want and the most you’d pay. You approve the hold
           in PayPal.
         </p>
         <code className="mt-10 block max-w-full overflow-x-auto whitespace-nowrap rounded-2xl bg-ink px-6 py-4 text-sm text-lime sm:inline-block">
@@ -90,9 +136,12 @@ export default function Landing() {
         </code>
       </section>
 
-      <footer className="mx-3 flex flex-wrap justify-between gap-2 px-6 py-8 text-sm text-muted sm:mx-6 sm:px-16">
-        <span className="wordmark text-ink">GROUP/BUY</span>
-        <span>PayPal AI Hackathon 2026 · Payments run in the PayPal sandbox. No real money moves.</span>
+      <footer className="mx-3 mb-3 mt-3 flex flex-wrap items-center justify-between gap-4 rounded-[28px] bg-lime px-6 py-8 sm:mx-6 sm:mb-6 sm:mt-4 sm:px-16">
+        <span className="wordmark text-xl">GROUP/BUY</span>
+        <span className="flex flex-wrap gap-x-8 gap-y-1 font-semibold">
+          <span>Payments held by PayPal</span>
+          <span>Sandbox demo · no real money</span>
+        </span>
       </footer>
     </>
   );
