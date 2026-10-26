@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Archivo } from "next/font/google";
-import "./globals.css";
+import { Inter } from "next/font/google";
+import "./site.css";
 
-// One variable font, width axis included: wide for the wordmark, condensed for headlines.
-const archivo = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-archivo" });
+// Inter everywhere so Windows judges see the same type as Mac (SF-like metrics).
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "Group Buy",
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={archivo.variable}>
+    <html lang="en" className={inter.variable}>
       <body>{children}</body>
     </html>
   );
