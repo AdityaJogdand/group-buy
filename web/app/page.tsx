@@ -35,6 +35,62 @@ const features = [
   { d: icon.chat, title: "Join from your AI", body: "An MCP server: Claude finds the group, you approve in PayPal." },
 ];
 
+// Price by group size for the headphones (lib/deals.ts): $350 solo, $300 from 10 buyers, $270 from 25.
+// One bar per seat; its height is the price everyone pays at that size. Seats taken in the demo group are lit.
+const NOW = 14;
+const SEATS = 25;
+const priceAt = (n: number) => (n >= 25 ? 270 : n >= 10 ? 300 : 350);
+const TIER_START = new Set([1, 10, 25]);
+
+function PriceChart() {
+  const height = (p: number) => `${15 + ((p - 250) / 100) * 80}%`; // $250 floor of the scale, so the steps read
+  return (
+    <div className="mt-auto pt-10">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <p>
+          <span className="block text-5xl font-medium tracking-tight tabular-nums">${priceAt(NOW)}</span>
+          <span className="text-muted">each at {NOW} buyers</span>
+        </p>
+        <div className="flex gap-2 text-sm">
+          <span className="rounded-full bg-ink px-3 py-1 font-medium text-black">Save ${350 - priceAt(NOW)}</span>
+          <span className="rounded-full px-3 py-1 text-muted shadow-[inset_0_0_0_1px_var(--line)]">$270 at 25</span>
+        </div>
+      </div>
+
+      <div className="mt-8 flex h-56 items-end gap-[3px] sm:gap-1" role="img"
+        aria-label={`Price per buyer: $350 alone, $300 from 10 buyers, $270 from 25. The demo group has ${NOW} buyers.`}>
+        {Array.from({ length: SEATS }, (_, i) => {
+          const n = i + 1;
+          const p = priceAt(n);
+          const now = n === NOW;
+          return (
+            <div key={n} className="relative flex h-full flex-1 items-end">
+              {TIER_START.has(n) && (
+                <span className={`absolute whitespace-nowrap text-xs tabular-nums text-muted ${n === SEATS ? "right-0" : "left-0"}`} style={{ bottom: `calc(${height(p)} + 8px)` }}>
+                  ${p}
+                </span>
+              )}
+              {now && (
+                <span className="absolute left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-2 py-0.5 text-xs font-medium text-black sm:block"
+                  style={{ bottom: `calc(${height(p)} + 10px)` }}>
+                  {NOW} now
+                </span>
+              )}
+              <span className={`w-full rounded-t-[4px] ${
+                now ? "bg-ink shadow-[0_0_18px_rgba(255,255,255,0.55)]"
+                : n < NOW ? "bg-gradient-to-b from-white/75 to-white/25"
+                : "bg-white/[0.07]"}`} style={{ height: height(p) }} />
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex justify-between border-t border-line pt-2 text-xs tabular-nums text-muted">
+        <span>1 buyer</span><span>{SEATS} buyers</span>
+      </div>
+    </div>
+  );
+}
+
 // The four steps, each with a small working-looking piece of the product.
 const seat = (on: boolean) => <span className={`aspect-square rounded-[3px] ${on ? "bg-ink" : "bg-white/10"}`} />;
 
@@ -103,13 +159,23 @@ export default function Landing() {
         <section className={section}>
           <div className="container-x">
             <Head tag="Introduction" title="What is Group Buy?" sub="Group buying where the money is held, not spent, until the group is real." />
-            <div className="mt-12 grid gap-3 md:grid-cols-3">
-              {features.map(f => (
-                <div key={f.title} className="card reveal flex gap-4 p-5">
-                  <Icon d={f.d} />
-                  <div><h3 className="font-medium">{f.title}</h3><p className="mt-1 text-sm text-muted">{f.body}</p></div>
+            <div className="mx-auto mt-14 grid max-w-[1280px] gap-4 lg:grid-cols-[1.45fr_1fr]">
+              <div className="card reveal flex flex-col p-6 sm:p-8">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="text-2xl font-medium tracking-tight">The price steps down as the group grows</h3>
+                  <span className="text-sm text-muted">Noise-cancelling headphones</span>
                 </div>
-              ))}
+                <p className="mt-2 text-muted">Everyone in the group pays the lowest price it reaches, including the people who joined first.</p>
+                <PriceChart />
+              </div>
+              <div className="grid gap-4">
+                {features.map(f => (
+                  <div key={f.title} className="card reveal flex gap-5 p-6 sm:p-7">
+                    <Icon d={f.d} />
+                    <div><h3 className="text-xl font-medium tracking-tight">{f.title}</h3><p className="mt-1.5 leading-relaxed text-muted">{f.body}</p></div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>

@@ -110,7 +110,7 @@ function JoinDialog({ p, onClose }: { p: Product | null; onClose: () => void }) 
 
   return (
     <dialog ref={ref} onClose={onClose}
-      className="card m-auto w-[min(92vw,30rem)] p-0 text-ink backdrop:bg-black/70 backdrop:backdrop-blur-sm">
+      className="fixed inset-0 m-auto h-fit w-[min(92vw,30rem)] rounded-[18px] bg-surface p-0 text-ink shadow-[inset_0_0_0_1px_var(--line)] backdrop:bg-black/70 backdrop:backdrop-blur-sm">
       {p && (
         <form onSubmit={submit} className="flex flex-col gap-5 p-7 sm:p-8">
           <div>
