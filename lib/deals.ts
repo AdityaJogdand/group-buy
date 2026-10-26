@@ -197,10 +197,27 @@ export async function expireDeal(dealId: number) {
   }
 }
 
-// Call on a timer; pass a fake `now` for the demo clock. Also resumes half-voided expired deals.
-export async function expireDue(now = new Date()) {
+// Lowest tier price the held buyers reach: enough buyers whose max covers it, and at least `target`.
+// Tiers outside [floor, list] are skipped (closeDeal would refuse them). null = no tier reached.
+export function tierPrice(deal: Pick<Deal, 'target' | 'floor_cents' | 'list_cents'>, tiers: Tier[], maxes: number[]): number | null {
+  const reached = tiers.filter(t => t.price_cents >= deal.floor_cents && t.price_cents <= deal.list_cents &&
+    maxes.filter(m => m >= t.price_cents).length >= Math.max(t.buyers, deal.target));
+  return reached.length ? Math.min(...reached.map(t => t.price_cents)) : null;
+}
+
+// Call on a timer; pass a fake `now` for the demo clock. At closes_at an open deal captures at the
+// best tier it reached, else expires. Also resumes half-voided expired deals.
+// ponytail: tiers are read from the product at close, not copied at open; copy them if sellers edit tiers mid-deal.
+// ponytail: a crash mid-close leaves the deal CLOSING; re-run closeDeal by hand (request IDs keep it safe).
+export async function settleDue(now = new Date()) {
   const due = db.prepare(`select id from deals where (status = 'OPEN' and closes_at <= ?)
     or (status = 'EXPIRED' and exists (select 1 from holds where deal_id = deals.id and status = 'HELD'))`)
     .all(now.toISOString()) as { id: number }[];
-  for (const { id } of due) await expireDeal(id);
+  for (const { id } of due) {
+    const deal = mustGetDeal(id);
+    const price = deal.status === 'OPEN' && tierPrice(deal, getProduct(deal.product_id)?.tiers ?? [],
+      getHolds(id).filter(h => h.status === 'HELD').map(h => h.max_cents));
+    if (price) await closeDeal(id, price);
+    else await expireDeal(id);
+  }
 }

@@ -33,6 +33,7 @@ Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties
 - [ ] Webhook endpoint + signature check (needs a public URL → do with the Render deploy)
 - [x] Simulated clock (3 days → 60 s): `lib/clock.ts`, CLOCK_SPEED=4320 (Oct 19: `npm run test:clock` → PASS)
 - [x] Simulated buyers: `scripts/buyers.ts` approves through the real PayPal page (Oct 18: `npm run test:money` → PASS, 10 holds)
+- [x] Auto-close (Oct 27): at closes_at, capture at the best tier the held buyers reached, else void all (`settleDue` in `lib/deals.ts`; `npm run test:autoclose` → PASS)
 
 **Exit:** one script runs 5 buyers → close → 5 captures, and 5 buyers → expire → 5 voids; webhooks land.
 
