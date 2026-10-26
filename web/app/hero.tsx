@@ -44,7 +44,7 @@ export function Hero() {
       {/* Left: message + buyer control */}
       <div className="flex flex-col justify-between gap-12">
         <div>
-          <h1 className="condensed text-[clamp(3rem,6.4vw,5.5rem)] uppercase leading-[0.92]">Every buyer<br />shrinks the<br />price.</h1>
+          <h1 className="display text-[clamp(2.75rem,5.6vw,5rem)] leading-[1.0]">Every buyer<br />shrinks the<br />price.</h1>
           <p className="mt-10 max-w-md text-xl leading-snug md:mt-24">
             Pool with strangers. PayPal holds your max. Everyone pays the group price, or nobody pays.
           </p>

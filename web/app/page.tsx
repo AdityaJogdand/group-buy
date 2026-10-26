@@ -24,7 +24,7 @@ const groups = [
 // The steps panel keeps its original, shorter height.
 const panelShort = "mx-3 mt-3 rounded-[28px] px-6 py-20 sm:mx-6 sm:mt-4 sm:px-16 sm:py-24";
 const panel = "mx-3 mt-3 flex min-h-[85svh] flex-col justify-center rounded-[28px] px-6 py-28 sm:mx-6 sm:mt-4 sm:px-16 sm:py-36";
-const h2 = "condensed text-[clamp(2.75rem,6vw,5rem)] uppercase leading-[0.92]";
+const h2 = "display text-[clamp(2.5rem,5vw,4.25rem)] leading-[1.02]";
 
 function Tool({ name }: { name: string }) {
   return (
@@ -119,7 +119,7 @@ export default function Landing() {
       {/* The guarantee */}
       <section className={`${panel} bg-ink text-lime`}>
         <p className="text-sm font-semibold uppercase tracking-[0.14em] opacity-70">The guarantee</p>
-        <p className="condensed mt-6 text-[clamp(3rem,8vw,7rem)] uppercase leading-[0.9]">
+        <p className="display mt-6 max-w-5xl text-[clamp(2.5rem,5.5vw,4.75rem)] leading-[1.04]">
           Held: your max.<br />
           Charged: the group price.<br />
           <span className="text-white/40">Or released. Nothing paid.</span>
@@ -134,7 +134,7 @@ export default function Landing() {
       <section id="claude" className={`${panel} bg-white`}>
         <div className="grid items-center gap-14 lg:grid-cols-2 [&>*]:min-w-0">
           <div>
-            <h2 className="condensed text-[clamp(3rem,5.6vw,5.5rem)] uppercase leading-[0.9]">Ask your AI.<br />It joins for you.</h2>
+            <h2 className="display text-[clamp(2.5rem,4.6vw,4.25rem)] leading-[1.02]">Ask your AI.<br />It joins for you.</h2>
             <p className="mt-8 max-w-xl text-2xl leading-snug">
               Group Buy is an MCP server. Your assistant finds the group, places the hold request, and you approve it in
               PayPal. No site to browse.
@@ -180,6 +180,7 @@ export default function Landing() {
         <span className="flex flex-wrap gap-x-8 gap-y-1 font-semibold">
           <span>Payments held by PayPal</span>
           <span>Sandbox demo · no real money</span>
+          <span>© 2026 Group Buy</span>
         </span>
       </footer>
     </>
