@@ -1,0 +1,46 @@
+# Render Blueprint: Dashboard → New → Blueprint → pick this repo.
+# Two services: the backend (MCP + API + PayPal return) and the website.
+# Secrets are `sync: false`: Render asks for them on first deploy; they never live in git.
+services:
+  - type: web
+    name: group-buy-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/products
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: HOST
+        value: 0.0.0.0
+      # ponytail: SQLite on the free plan's disk is wiped on every deploy/restart; the catalog reseeds on boot.
+      # Add a paid persistent disk at /var/data and set DB_PATH=/var/data/groupbuy.db if deals must survive restarts.
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      # The website's public URL, for the redirect after PayPal approval, e.g. https://group-buy-web.onrender.com
+      - key: WEB_URL
+        sync: false
+
+  - type: web
+    name: group-buy-web
+    runtime: node
+    plan: free
+    rootDir: web
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      # The backend's public URL, e.g. https://group-buy-api.onrender.com. Read at build time (proxy + MCP command),
+      # so redeploy the website after changing it.
+      - key: API_URL
+        sync: false

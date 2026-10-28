@@ -11,6 +11,7 @@
     "test:grouping": "DB_PATH=:memory: node --no-warnings scripts/test-grouping.ts",
     "typecheck": "tsc",
     "server": "node --no-warnings --env-file=.env server.ts",
+    "start": "node --no-warnings server.ts",
     "test:mcp": "DB_PATH=:memory: node --no-warnings --env-file=.env scripts/test-mcp.ts"
   },
   "devDependencies": {

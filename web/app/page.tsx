@@ -153,6 +153,8 @@ function StepHead({ n, title, body }: { n: number; title: string; body: string }
 }
 
 const section = "py-24 sm:py-32";
+// The backend's public MCP endpoint; API_URL is set at build time on Render.
+const MCP_URL = `${process.env.API_URL ?? "http://localhost:3000"}/mcp`;
 
 export default function Landing() {
   return (
@@ -243,9 +245,9 @@ export default function Landing() {
                   <div className="rounded-2xl bg-black/50 p-4 font-mono text-[0.8125rem] leading-relaxed shadow-[inset_0_0_0_1px_var(--line)]">
                     <div className="mb-3 flex items-center justify-between">
                       <span aria-hidden className="flex gap-1.5"><span className="size-2.5 rounded-full bg-white/15" /><span className="size-2.5 rounded-full bg-white/15" /><span className="size-2.5 rounded-full bg-white/15" /></span>
-                      <CopyButton text="claude mcp add --transport http group-buy http://localhost:3000/mcp" />
+                      <CopyButton text={`claude mcp add --transport http group-buy ${MCP_URL}`} />
                     </div>
-                    <p className="[overflow-wrap:anywhere]"><span className="select-none text-muted">$ </span>claude mcp add --transport http group-buy http://localhost:3000/mcp</p>
+                    <p className="[overflow-wrap:anywhere]"><span className="select-none text-muted">$ </span>claude mcp add --transport http group-buy {MCP_URL}</p>
                     <p className="mt-2 text-muted" aria-hidden>✓ Added HTTP MCP server group-buy</p>
                   </div>
                 </div>

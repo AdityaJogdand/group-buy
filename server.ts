@@ -10,7 +10,8 @@ import { group } from './lib/grouping.ts';
 import { now, startClock } from './lib/clock.ts';
 
 const PORT = Number(process.env.PORT ?? 3000);
-const BASE_URL = process.env.BASE_URL ?? `http://localhost:${PORT}`;
+// Render sets RENDER_EXTERNAL_URL to the service's public https URL.
+const BASE_URL = process.env.BASE_URL ?? process.env.RENDER_EXTERNAL_URL ?? `http://localhost:${PORT}`;
 const WEB_URL = process.env.WEB_URL ?? 'http://localhost:3001';
 // ponytail: one buyer name for every MCP session; add per-session auth when real users connect.
 const BUYER = process.env.MCP_BUYER ?? 'mcp-buyer';
@@ -161,6 +162,6 @@ app.post('/api/join', c => api(c, async () => {
 // Stateless: no sessions to lose, so a server restart never strands a connected client.
 if (import.meta.main) {
   startClock();
-  await server.start({ transportType: 'httpStream', httpStream: { port: PORT, stateless: true } });
+  await server.start({ transportType: 'httpStream', httpStream: { port: PORT, host: process.env.HOST, stateless: true } });
   console.error(`group-buy MCP on ${BASE_URL}/mcp`);
 }
