@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { Hero } from "./hero";
-import { CopyCommand } from "./copy-command";
+import { CopyButton } from "./copy-command";
 import { Groups } from "./groups";
 import { Nav, Footer, LogoMark } from "./nav";
 
@@ -142,11 +142,13 @@ const outcomes = [
     rows: [["PayPal hold", "Voided"], ["Charged", "Nothing"], ["Action needed", "None"]] },
 ];
 
-function Tool({ name }: { name: string }) {
+function StepHead({ n, title, body }: { n: number; title: string; body: string }) {
   return (
-    <p className="flex items-center gap-2 text-sm text-muted">
-      <span className="size-1.5 rounded-full bg-ink/60" /> Used group-buy · <code className="text-ink">{name}</code>
-    </p>
+    <>
+      <span className="grid size-9 place-items-center rounded-full bg-raised text-sm tabular-nums shadow-[inset_0_0_0_1px_var(--line),inset_0_1px_0_rgba(255,255,255,0.12)]">{n}</span>
+      <h3 className="mt-5 text-2xl font-medium tracking-tight">{title}</h3>
+      <p className="mt-2 leading-relaxed text-muted">{body}</p>
+    </>
   );
 }
 
@@ -231,47 +233,56 @@ export default function Landing() {
 
         <section id="claude" className={section}>
           <div className="container-x">
-            <Head tag="Use with Claude" title="Ask your AI. It joins for you." sub="Group Buy is an MCP server. Your assistant finds the group; you approve the hold in PayPal." />
-            <div className="mt-12 grid items-stretch gap-3 lg:grid-cols-2 [&>*]:min-w-0">
-              <div className="card reveal flex flex-col p-6 sm:p-8">
-                <p className="text-sm font-medium uppercase tracking-[0.08em] text-muted">Set up in three steps</p>
-                {/* Steps joined by a thread, so they read as one flow. */}
-                <ol className="relative mt-5 grid gap-5 before:absolute before:bottom-3 before:left-[0.9rem] before:top-3 before:w-px before:bg-white/10">
-                  {["Copy the command into your terminal.", "Ask Claude for what you want and the most you'd pay.", "Approve the hold in PayPal. Done."].map((t, i) => (
-                    <li key={t} className="relative flex items-center gap-4">
-                      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-raised text-xs tabular-nums shadow-[inset_0_0_0_1px_var(--line)]">{i + 1}</span>
-                      <span>{t}</span>
-                    </li>
-                  ))}
-                </ol>
-
-                {/* Things a buyer can paste straight into Claude. */}
-                <p className="mt-9 text-sm font-medium uppercase tracking-[0.08em] text-muted">Try asking</p>
-                <ul className="mt-4 grid gap-2">
-                  {["Find me a group deal on noise-cancelling headphones under $320.", "Is there a group for the UX design course? I'd pay up to $180.", "How is my headphones group doing?"].map(q => (
-                    <li key={q} className="rounded-xl bg-raised px-4 py-3 text-sm shadow-[inset_0_0_0_1px_var(--line)]">&ldquo;{q}&rdquo;</li>
-                  ))}
-                </ul>
-                <div className="mt-auto pt-8"><CopyCommand command="claude mcp add --transport http group-buy http://localhost:3000/mcp" /></div>
-              </div>
-
-              <div className="card reveal grid gap-4 p-5 sm:p-6" aria-label="Example conversation with Claude">
-                <p className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-ink px-4 py-3 text-black">
-                  Find me noise-cancelling headphones in a group deal.
-                </p>
-                <Tool name="find_deal" />
-                <p className="max-w-[90%] rounded-2xl rounded-bl-md bg-raised px-4 py-3">
-                  One group is filling: <b>14 of 25 buyers</b>, ends in 2 days. The price drops at 25. What&apos;s the most
-                  you&apos;d pay?
-                </p>
-                <p className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-ink px-4 py-3 text-black">Hold up to the solo price.</p>
-                <Tool name="join_deal" />
-                <div className="max-w-[90%] rounded-2xl rounded-bl-md bg-raised px-4 py-3">
-                  <p>You&apos;re in. Approve the hold and you&apos;ll pay the group price when it closes, never more.</p>
-                  <span className="btn mt-4 px-4 py-2 text-sm">Approve in PayPal</span>
+            <Head center tag="Use with Claude" title={<>Ask your AI.<br />It joins for you.</>} sub="Connect once. Then just say what you want and the most you'd pay. You only ever approve the hold yourself, in PayPal." />
+            <ol className="mt-14 grid gap-4 lg:grid-cols-3 [&>*]:min-w-0">
+              {/* 1. Connect */}
+              <li className="card reveal flex flex-col p-6 sm:p-7">
+                <StepHead n={1} title="Connect" body="Paste one command into your terminal. Works with Claude Code and Claude Desktop." />
+                {/* The terminal, with the command in full and what it prints back. */}
+                <div className="mt-auto pt-8">
+                  <div className="rounded-2xl bg-black/50 p-4 font-mono text-[0.8125rem] leading-relaxed shadow-[inset_0_0_0_1px_var(--line)]">
+                    <div className="mb-3 flex items-center justify-between">
+                      <span aria-hidden className="flex gap-1.5"><span className="size-2.5 rounded-full bg-white/15" /><span className="size-2.5 rounded-full bg-white/15" /><span className="size-2.5 rounded-full bg-white/15" /></span>
+                      <CopyButton text="claude mcp add --transport http group-buy http://localhost:3000/mcp" />
+                    </div>
+                    <p className="[overflow-wrap:anywhere]"><span className="select-none text-muted">$ </span>claude mcp add --transport http group-buy http://localhost:3000/mcp</p>
+                    <p className="mt-2 text-muted" aria-hidden>✓ Added HTTP MCP server group-buy</p>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </li>
+
+              {/* 2. Ask */}
+              <li className="card reveal flex flex-col p-6 sm:p-7">
+                <StepHead n={2} title="Ask" body="In plain words. Claude finds the group and tells you where the price is." />
+                <div className="mt-auto grid gap-3 pt-8 text-sm" aria-label="Example conversation with Claude">
+                  <p className="ml-auto max-w-[88%] rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-black">
+                    Find me noise-cancelling headphones in a group deal. I&apos;d pay up to the solo price.
+                  </p>
+                  <p className="max-w-[92%] rounded-2xl rounded-bl-md bg-raised px-4 py-2.5 shadow-[inset_0_0_0_1px_var(--line)]">
+                    One group is filling, <b>14 of 25 buyers</b>. I&apos;ve requested your hold; approve it in PayPal.
+                  </p>
+                </div>
+              </li>
+
+              {/* 3. Approve */}
+              <li className="card reveal flex flex-col p-6 sm:p-7">
+                <StepHead n={3} title="Approve" body="PayPal holds your max. You pay the group price at the deadline, or nothing." />
+                <div className="mt-auto pt-8">
+                  <div className="rounded-2xl bg-raised p-4 text-sm shadow-[inset_0_0_0_1px_var(--line)]">
+                    <div className="flex items-center justify-between text-muted"><span>PayPal</span><span>Hold request</span></div>
+                    <p className="mt-3 font-medium">Noise-cancelling headphones</p>
+                    <p className="text-muted">Group deal · Sound Supply</p>
+                    <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
+                      <span className="text-muted">Held now</span><span>Your max</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1.5">
+                      <span className="text-muted">Charged now</span><span>Nothing</span>
+                    </div>
+                    <span className="btn mt-4 w-full justify-center py-2.5">Approve hold</span>
+                  </div>
+                </div>
+              </li>
+            </ol>
           </div>
         </section>
 

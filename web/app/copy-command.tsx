@@ -20,3 +20,14 @@ export function CopyCommand({ command }: { command: string }) {
     </div>
   );
 }
+
+// Just the button, for places that already show the command (the terminal card on the landing page).
+export function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button type="button" aria-live="polite" className="btn press px-3 py-1 text-xs"
+      onClick={() => navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600); }, () => {})}>
+      {copied ? "Copied ✓" : "Copy"}
+    </button>
+  );
+}
