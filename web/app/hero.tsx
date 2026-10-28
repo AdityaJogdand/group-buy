@@ -1,4 +1,6 @@
 // Hero: headline and one white action, centered in the viewport over a valley of fine lines.
+import { LiveCount } from "./groups";
+
 // No JS: the terrain is a static SVG generated here; motion elsewhere is CSS and stops under reduced motion.
 
 // Valley lines: each is flat at the edges' height, dips to the center. Back lines are tall and faint,
@@ -29,7 +31,7 @@ export function Hero() {
 
       <div className="container-x flex min-h-[calc(100svh-3.5rem-5rem)] flex-col items-center justify-center py-16 text-center">
         <h1 className="display text-[clamp(2.75rem,6.4vw,5rem)]">
-          Every buyer lowers the price.<br /><span className="text-muted">Pay together, or not at all.</span>
+          Every buyer lowers the price.<br /><span className="text-fade">Pay together, or not at all.</span>
         </h1>
         <p className="mt-6 max-w-xl text-lg text-muted">
           Pool with strangers for the bulk price. PayPal holds your max; everyone pays the group price, or nobody pays.
@@ -38,11 +40,12 @@ export function Hero() {
           <a href="#groups" className="btn press px-6 py-3">Browse groups</a>
           <a href="#claude" className="btn-ghost press px-6 py-3">Use with Claude</a>
         </div>
+        <LiveCount />
       </div>
 
       {/* What it runs on. Real stack, not partner logos. */}
       <div className="container-x relative pb-16">
-        <ul className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-sm font-medium text-white/45">
+        <ul className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-sm font-medium text-white/60">
           {["PayPal Orders v2", "Model Context Protocol", "Claude", "Next.js", "Groq"].map(n => <li key={n}>{n}</li>)}
         </ul>
       </div>

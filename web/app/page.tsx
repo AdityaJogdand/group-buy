@@ -4,13 +4,13 @@ import { CopyCommand } from "./copy-command";
 import { Groups } from "./groups";
 import { Nav, Footer, LogoMark } from "./nav";
 
-// Section header: tag pill, centered title, one line under it (the reference's rhythm).
-function Head({ tag, title, sub }: { tag: string; title: string; sub: string }) {
+// Section header: tag pill, left-aligned title fading grey to white, one line under it.
+function Head({ tag, title, sub, center }: { tag: string; title: React.ReactNode; sub: string; center?: boolean }) {
   return (
-    <div className="reveal mx-auto max-w-2xl text-center">
+    <div className={`reveal max-w-2xl ${center ? "mx-auto text-center" : ""}`}>
       <span className="tag"><LogoMark className="h-2.5 w-4" /> {tag}</span>
-      <h2 className="display mt-5 text-[clamp(2rem,4vw,3rem)]">{title}</h2>
-      <p className="mt-3 text-muted">{sub}</p>
+      <h2 className="display text-fade mt-5 pb-1 text-[clamp(2.25rem,4.6vw,3.5rem)]">{title}</h2>
+      <p className={`mt-3 max-w-xl text-muted ${center ? "mx-auto" : ""}`}>{sub}</p>
     </div>
   );
 }
@@ -76,10 +76,10 @@ function PriceChart() {
                   {NOW} now
                 </span>
               )}
-              <span className={`w-full rounded-t-[4px] ${
+              <span style={{ height: height(p) }} className={`w-full rounded-t-[4px] ${
                 now ? "bg-ink shadow-[0_0_18px_rgba(255,255,255,0.55)]"
                 : n < NOW ? "bg-gradient-to-b from-white/75 to-white/25"
-                : "bg-white/[0.07]"}`} style={{ height: height(p) }} />
+                : "bg-white/[0.07]"}`} />
             </div>
           );
         })}
@@ -132,11 +132,14 @@ const steps = [
   { title: "Everyone pays the same", body: "At the deadline all holds are captured at one price, or all released." },
 ];
 
-// The guarantee, as facts. True by construction (lib/deals.ts), not marketing numbers.
-const facts = [
-  { big: "$0", small: "charged until the group closes" },
-  { big: "1 price", small: "for every buyer in the group" },
-  { big: "≤ your max", small: "the most you can ever be charged" },
+// The life of a hold, as PayPal actually runs it (lib/deals.ts): authorize, then capture at the group price or void.
+const outcomes = [
+  { step: "01", title: "Held", body: "You approve in PayPal. Your max is authorized, not charged.",
+    rows: [["PayPal hold", "Authorized"], ["Amount held", "Your max"], ["Charged", "Nothing yet"]] },
+  { step: "02", title: "Charged once", body: "The group fills. Everyone is charged the same group price, once.",
+    rows: [["You pay", "The group price"], ["Same for", "Every buyer"], ["Never more than", "Your max"]] },
+  { step: "03", title: "Or released", body: "The group misses the minimum. Every hold is voided.",
+    rows: [["PayPal hold", "Voided"], ["Charged", "Nothing"], ["Action needed", "None"]] },
 ];
 
 function Tool({ name }: { name: string }) {
@@ -204,31 +207,52 @@ export default function Landing() {
 
         <section className={section}>
           <div className="container-x">
-            <Head tag="The guarantee" title="Held. Charged once. Or released." sub="Holds are PayPal authorizations, not payments." />
-            <dl className="card reveal mt-12 grid divide-line sm:grid-cols-3 sm:divide-x">
-              {facts.map(f => (
-                <div key={f.big} className="px-6 py-10 text-center">
-                  <dt className="text-4xl font-medium tracking-tight">{f.big}</dt>
-                  <dd className="mt-2 text-sm text-muted">{f.small}</dd>
-                </div>
+            <Head tag="The guarantee" title={<>Held. Charged once.<br />Or released.</>} sub="Holds are PayPal authorizations, not payments. Every group ends one of two ways, and neither can charge you more than you approved." />
+            <ol className="relative mt-14 grid gap-4 lg:grid-cols-3">
+              {/* The thread through the three stages. */}
+              <span aria-hidden className="absolute left-[16%] right-[16%] top-[2.1rem] hidden h-px bg-gradient-to-r from-white/40 via-white/20 to-white/5 lg:block" />
+              {outcomes.map(o => (
+                <li key={o.title} className="slab reveal relative flex flex-col p-6 sm:p-7">
+                  <span className="relative grid size-11 place-items-center rounded-full bg-raised text-sm font-medium tabular-nums shadow-[inset_0_0_0_1px_var(--line),inset_0_1px_0_rgba(255,255,255,0.15)]">{o.step}</span>
+                  <h3 className="mt-6 text-2xl font-medium tracking-tight">{o.title}</h3>
+                  <p className="mt-2 leading-relaxed text-muted">{o.body}</p>
+                  <dl className="mt-6 divide-y divide-line rounded-xl bg-black/40 px-4 text-sm shadow-[inset_0_0_0_1px_var(--line)]">
+                    {o.rows.map(([k, v]) => (
+                      <div key={k} className="flex justify-between gap-4 py-2.5">
+                        <dt className="text-muted">{k}</dt><dd className="font-medium tabular-nums">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </li>
               ))}
-            </dl>
+            </ol>
           </div>
         </section>
 
         <section id="claude" className={section}>
           <div className="container-x">
             <Head tag="Use with Claude" title="Ask your AI. It joins for you." sub="Group Buy is an MCP server. Your assistant finds the group; you approve the hold in PayPal." />
-            <div className="mt-12 grid items-start gap-3 lg:grid-cols-2 [&>*]:min-w-0">
-              <div className="card reveal p-6 sm:p-8">
-                <ol className="grid gap-4">
+            <div className="mt-12 grid items-stretch gap-3 lg:grid-cols-2 [&>*]:min-w-0">
+              <div className="card reveal flex flex-col p-6 sm:p-8">
+                <p className="text-sm font-medium uppercase tracking-[0.08em] text-muted">Set up in three steps</p>
+                {/* Steps joined by a thread, so they read as one flow. */}
+                <ol className="relative mt-5 grid gap-5 before:absolute before:bottom-3 before:left-[0.9rem] before:top-3 before:w-px before:bg-white/10">
                   {["Copy the command into your terminal.", "Ask Claude for what you want and the most you'd pay.", "Approve the hold in PayPal. Done."].map((t, i) => (
-                    <li key={t} className="flex items-baseline gap-4">
-                      <span className="w-6 shrink-0 text-sm tabular-nums text-muted">0{i + 1}</span><span>{t}</span>
+                    <li key={t} className="relative flex items-center gap-4">
+                      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-raised text-xs tabular-nums shadow-[inset_0_0_0_1px_var(--line)]">{i + 1}</span>
+                      <span>{t}</span>
                     </li>
                   ))}
                 </ol>
-                <div className="mt-8"><CopyCommand command="claude mcp add --transport http group-buy http://localhost:3000/mcp" /></div>
+
+                {/* Things a buyer can paste straight into Claude. */}
+                <p className="mt-9 text-sm font-medium uppercase tracking-[0.08em] text-muted">Try asking</p>
+                <ul className="mt-4 grid gap-2">
+                  {["Find me a group deal on noise-cancelling headphones under $320.", "Is there a group for the UX design course? I'd pay up to $180.", "How is my headphones group doing?"].map(q => (
+                    <li key={q} className="rounded-xl bg-raised px-4 py-3 text-sm shadow-[inset_0_0_0_1px_var(--line)]">&ldquo;{q}&rdquo;</li>
+                  ))}
+                </ul>
+                <div className="mt-auto pt-8"><CopyCommand command="claude mcp add --transport http group-buy http://localhost:3000/mcp" /></div>
               </div>
 
               <div className="card reveal grid gap-4 p-5 sm:p-6" aria-label="Example conversation with Claude">
@@ -247,6 +271,50 @@ export default function Landing() {
                   <span className="btn mt-4 px-4 py-2 text-sm">Approve in PayPal</span>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Answers at the point of doubt: the questions a careful buyer asks before handing over a hold. */}
+        <section id="faq" className={section}>
+          <div className="container-x">
+            <Head center tag="Questions" title="Before you join" sub="The short answers about holds, charges and leaving." />
+            <div className="reveal mx-auto mt-12 max-w-3xl border-t border-line">
+                <details className="group border-b border-line py-5 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-lg font-medium">
+                    When am I charged?
+                    <span aria-hidden className="text-2xl font-light text-muted transition-transform duration-200 group-open:rotate-45">+</span>
+                  </summary>
+                  <p className="mt-3 max-w-2xl leading-relaxed text-muted">Only when the group closes at its deadline. Until then PayPal holds your max as an authorization; no money moves.</p>
+                </details>
+                <details className="group border-b border-line py-5 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-lg font-medium">
+                    What if the group doesn't fill?
+                    <span aria-hidden className="text-2xl font-light text-muted transition-transform duration-200 group-open:rotate-45">+</span>
+                  </summary>
+                  <p className="mt-3 max-w-2xl leading-relaxed text-muted">Every hold is released and nobody pays anything. You don't need to do anything.</p>
+                </details>
+                <details className="group border-b border-line py-5 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-lg font-medium">
+                    Could I pay more than I agreed to?
+                    <span aria-hidden className="text-2xl font-light text-muted transition-transform duration-200 group-open:rotate-45">+</span>
+                  </summary>
+                  <p className="mt-3 max-w-2xl leading-relaxed text-muted">No. You're charged the group price, and never more than the hold you approved.</p>
+                </details>
+                <details className="group border-b border-line py-5 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-lg font-medium">
+                    Can I leave a group?
+                    <span aria-hidden className="text-2xl font-light text-muted transition-transform duration-200 group-open:rotate-45">+</span>
+                  </summary>
+                  <p className="mt-3 max-w-2xl leading-relaxed text-muted">Yes, any time before it closes. Your hold is released straight away.</p>
+                </details>
+                <details className="group border-b border-line py-5 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-lg font-medium">
+                    Is this real money?
+                    <span aria-hidden className="text-2xl font-light text-muted transition-transform duration-200 group-open:rotate-45">+</span>
+                  </summary>
+                  <p className="mt-3 max-w-2xl leading-relaxed text-muted">Not in this demo. It runs on the PayPal sandbox with test accounts.</p>
+                </details>
             </div>
           </div>
         </section>

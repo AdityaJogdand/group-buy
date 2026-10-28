@@ -88,6 +88,11 @@ function JoinDialog({ p, onClose }: { p: Product | null; onClose: () => void }) 
   const [name, setName] = useState("");
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const list = p ? dollars(p.list_price) : 0;
+  const tiers = (p?.group_prices ?? []).map(t => ({ buyers: t.buyers, price: dollars(t.price) }));
+  const best = tiers.at(-1);
+  const held = p ? Math.max(0, ...p.open_deals.map(d => d.buyers)) : 0;
+  const now = tiers.reduce((x, t) => (held >= t.buyers ? t.price : x), list);
 
   useEffect(() => {
     if (!p) return;
@@ -124,6 +129,11 @@ function JoinDialog({ p, onClose }: { p: Product | null; onClose: () => void }) 
           <div>
             <p className="text-sm text-muted">Join the group</p>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight">{p.name}</h2>
+            {/* Decide with the numbers in view: where the price is now and where it can go. */}
+            <p className="mt-3 flex flex-wrap gap-2 text-sm">
+              <span className="rounded-full bg-raised px-3 py-1 tabular-nums shadow-[inset_0_0_0_1px_var(--line)]">Now ${now}</span>
+              {best && <span className="rounded-full px-3 py-1 tabular-nums text-muted shadow-[inset_0_0_0_1px_var(--line)]">${best.price} at {best.buyers} buyers</span>}
+            </p>
           </div>
           <label className="flex flex-col gap-2 text-sm font-medium">
             Your name
@@ -137,8 +147,19 @@ function JoinDialog({ p, onClose }: { p: Product | null; onClose: () => void }) 
               <input value={max} onChange={e => setMax(e.target.value)} type="number" inputMode="decimal" min="1" step="any" required
                 className="w-full bg-transparent py-3 pl-1 text-lg font-normal tabular-nums outline-none" />
             </span>
-            <span className="text-sm font-normal text-muted">
-              PayPal holds this amount. You pay the group price at the deadline, never more. If the group doesn&apos;t fill, the hold is released.
+            {/* One-tap amounts. The solo price is the safe pick: it covers every group price. */}
+            <span className="flex flex-wrap gap-2">
+              {[{ v: list, label: `$${list} · covers every price` }, ...(best ? [{ v: best.price, label: `$${best.price} · best price only` }] : [])].map(o => (
+                <button key={o.v} type="button" onClick={() => setMax(String(o.v))}
+                  className={`press rounded-full px-3 py-1.5 text-sm font-normal tabular-nums ${Number(max) === o.v ? "bg-ink text-black" : "bg-raised text-ink shadow-[inset_0_0_0_1px_var(--line)]"}`}>
+                  {o.label}
+                </button>
+              ))}
+            </span>
+            <span className="text-sm font-normal text-muted" aria-live="polite">
+              {Number(max) > 0 && Number(max) < list
+                ? `If the group ends above $${Number(max)}, your hold is released and you pay nothing.`
+                : "PayPal holds this amount. You pay the group price at the deadline, never more. If the group doesn't fill, the hold is released."}
             </span>
           </label>
           {note && <p role="alert" className="rounded-xl bg-raised px-4 py-3 text-base">{note}</p>}
@@ -183,3 +204,23 @@ export function Groups() {
     </>
   );
 }
+
+// Proof next to the main action, and it's real: counts straight from the backend. Renders nothing until loaded
+// or if the backend is down, so it can never show a made-up number.
+export function LiveCount() {
+  const [n, setN] = useState<{ groups: number; buyers: number }>();
+  useEffect(() => {
+    fetch("/api/products").then(r => (r.ok ? r.json() : Promise.reject())).then((ps: Product[]) => {
+      const deals = ps.flatMap(p => p.open_deals);
+      setN({ groups: deals.length, buyers: deals.reduce((a, d) => a + d.buyers, 0) });
+    }).catch(() => {});
+  }, []);
+  if (!n || !n.groups) return null;
+  return (
+    <p className="mt-6 flex items-center gap-2 text-sm text-muted">
+      <span className="relative flex size-2"><span className="absolute inset-0 animate-ping rounded-full bg-ink/60" /><span className="relative size-2 rounded-full bg-ink" /></span>
+      {n.groups} {n.groups === 1 ? "group" : "groups"} filling now · {n.buyers} {n.buyers === 1 ? "buyer" : "buyers"} holding
+    </p>
+  );
+}
+
