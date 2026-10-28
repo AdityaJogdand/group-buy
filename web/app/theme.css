@@ -28,7 +28,8 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
-:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.7); outline-offset: 2px; }
+/* In the base layer so a utility (outline-none) can opt a field out; unlayered CSS would always win. */
+@layer base { :focus-visible { outline: 2px solid rgba(255, 255, 255, 0.7); outline-offset: 2px; } }
 
 /* Type: tracking tightens as size grows; body stays near 0. */
 .display { font-weight: 500; letter-spacing: -0.035em; line-height: 1.05; }

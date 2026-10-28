@@ -7,6 +7,8 @@ import { z } from 'zod';
 import type { Context } from 'hono';
 import { db, getProduct, getProducts, getDeal, getHold, startHold, authorizeHold, leaveDeal } from './lib/deals.ts';
 import { group } from './lib/grouping.ts';
+import { intake } from './lib/intake.ts';
+import type { ChatMessage } from './lib/llm.ts';
 import { now, startClock } from './lib/clock.ts';
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -51,7 +53,7 @@ const catalog = (productId?: string) => getProducts().filter(p => !productId || 
   open_deals: openDeals(p.id),
 }));
 
-async function join({ product_id, max_usd, deadline }: { product_id: string; max_usd: number; deadline?: string },
+async function join({ product_id, max_usd, deadline }: { product_id: string; max_usd: number; deadline?: string | null },
   buyer: string, returnUrl: string) {
   const product = getProduct(product_id);
   if (!product) throw new UserError(`unknown product ${product_id}; call find_deal for ids`);
@@ -156,7 +158,26 @@ app.post('/api/join', c => api(c, async () => {
   const body = await c.req.json().catch(() => ({}));
   // ponytail: the buyer's name is just a label on the hold; add accounts when sellers need verified buyers.
   const name = String(body.name ?? '').trim().slice(0, 40) || 'web-buyer';
-  return join({ product_id: String(body.product_id ?? ''), max_usd: Number(body.max_usd) }, name, `${BASE_URL}/paypal/return/web`);
+  const deadline = typeof body.deadline === 'string' ? body.deadline : null;
+  return join({ product_id: String(body.product_id ?? ''), max_usd: Number(body.max_usd), deadline }, name, `${BASE_URL}/paypal/return/web`);
+}));
+
+// Free text -> what the buyer wants, or one follow-up question. Read-only: opens no deal and holds nothing;
+// the site shows the result for the buyer to confirm, then calls /api/join.
+// ponytail: no rate limit; every call spends LLM tokens. Add a per-IP limit before sharing the URL widely.
+app.post('/api/intake', c => api(c, async () => {
+  const body = await c.req.json().catch(() => ({}));
+  const raw: unknown[] = Array.isArray(body.messages) ? body.messages : [];
+  const messages: ChatMessage[] = raw.slice(-12).flatMap(m => {
+    const { role, content } = (m ?? {}) as Record<string, unknown>;
+    return (role === 'user' || role === 'assistant') && typeof content === 'string' && content.trim()
+      ? [{ role, content: content.slice(0, 500) }] : [];
+  });
+  if (messages.at(-1)?.role !== 'user') throw new UserError('Say what you want to buy.');
+  const r = await intake(messages, now());
+  if ('ask' in r || 'declined' in r) return r;
+  const p = getProduct(r.productId)!;
+  return { product_id: p.id, product: p.name, max_usd: r.maxCents / 100, list_usd: p.list_cents / 100, deadline: r.deadline };
 }));
 
 // Stateless: no sessions to lose, so a server restart never strands a connected client.

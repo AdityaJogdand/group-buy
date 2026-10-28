@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./page.css";
+import "./theme.css";
 
 // Inter everywhere so Windows judges see the same type as Mac (SF-like metrics).
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });

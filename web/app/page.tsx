@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Hero } from "./hero";
 import { CopyButton } from "./copy-command";
 import { Groups } from "./groups";
+import { Ask } from "./ask";
 import { Nav, Footer, LogoMark } from "./nav";
 
 // Section header: tag pill, left-aligned title fading grey to white, one line under it.
@@ -204,7 +205,7 @@ export default function Landing() {
 
         <section id="groups" className={section}>
           <div className="container-x">
-            <Head tag="Filling now" title="Join a group" sub="Live from the PayPal sandbox. Counts update as buyers join." />
+            <Head tag="Filling now" title="Join a group" sub="Pick a group below, or tap Ask AI and say what you want." />
             <Groups />
           </div>
         </section>
@@ -333,6 +334,7 @@ export default function Landing() {
         </section>
       </main>
       <Footer />
+      <Ask />
     </>
   );
 }

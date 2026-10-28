@@ -1,12 +1,12 @@
 // MCP tools end to end, in-process client, real PayPal sandbox:
 // find -> join below floor (question) -> join -> approve -> /paypal/return -> status HELD -> leave -> PayPal VOIDED.
-// Then the website API: /api/products, /api/join, approve -> /paypal/return/web redirect -> /api/holds.
+// Then the website API: /api/products, /api/join, approve -> /paypal/return/web redirect -> /api/holds, /api/intake.
 // Run: npm run test:mcp
 import assert from 'node:assert/strict';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { server } from '../server.ts';
-import { getHold, leaveDeal } from '../lib/deals.ts';
+import { db, getHold, leaveDeal } from '../lib/deals.ts';
 import { paypal } from '../lib/paypal.ts';
 import { approve } from './buyers.ts';
 
@@ -77,6 +77,18 @@ assert.equal(held.hold_status, 'HELD');
 assert.equal((await app.request('/api/holds/FAKE')).status, 400);
 await leaveDeal(getHold('order_id', web.hold)!.id);
 console.log('web api ok');
+
+// Intake (real LLM call): read-only, so it opens no deal.
+const ask = (messages: object[]) => app.request('/api/intake', { method: 'POST', body: JSON.stringify({ messages }), headers: { 'content-type': 'application/json' } });
+assert.equal((await ask([])).status, 400);
+const dealsBefore = (db.prepare('select count(*) n from deals').get() as { n: number }).n;
+const parsed = await (await ask([{ role: 'user', content: 'I want the UX design course, up to $170' }])).json();
+assert.equal(parsed.product_id, 'ux-course');
+assert.equal(parsed.max_usd, 170);
+assert.ok(!JSON.stringify(parsed).includes('floor'));
+assert.ok('ask' in await (await ask([{ role: 'user', content: 'something nice' }])).json(), 'vague request gets a question');
+assert.equal((db.prepare('select count(*) n from deals').get() as { n: number }).n, dealsBefore, 'intake opened a deal');
+console.log('intake api ok');
 
 await client.close();
 console.log('MCP PASS');
