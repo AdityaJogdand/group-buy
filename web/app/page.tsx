@@ -1,4 +1,5 @@
 import { Hero } from "./hero";
+import { Lens } from "./lens";
 import { CopyButton } from "./copy-command";
 import { Ask } from "./ask";
 import { Nav, Footer, Head } from "./nav";
@@ -132,6 +133,14 @@ export default function Landing() {
                 ))}
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Interactive: a lens that turns solo prices into group prices. */}
+        <section className={section}>
+          <div className="container-x">
+            <Head center tag="Try it" title="See what the group pays." sub="Same list, same products. Look through the lens." />
+            <div className="mt-12"><Lens /></div>
           </div>
         </section>
 
