@@ -27,10 +27,8 @@ export function timeLeft(ms: number) {
   return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${Math.max(1, m)}m`;
 }
 
-// Apple store-style tile: product photo full-bleed on top, then centered name, price line, a slim progress bar
-// with the tiers marked, and two centered actions.
-function GroupCard({ p, onJoin }: { p: Product; onJoin: () => void }) {
-  const photo = photos[p.id];
+// Where a group stands: its fullest open deal, current and best price, and the next price break.
+function stats(p: Product) {
   const deal = [...p.open_deals].sort((a, b) => b.buyers - a.buyers)[0];
   const buyers = deal?.buyers ?? 0;
   const list = dollars(p.list_price);
@@ -38,45 +36,102 @@ function GroupCard({ p, onJoin }: { p: Product; onJoin: () => void }) {
   const price = tiers.reduce((x, t) => (buyers >= t.buyers ? t.price : x), list);
   const next = tiers.find(t => t.buyers > buyers);
   const best = tiers.at(-1);
-  const seats = best?.buyers ?? 10;
+  return { deal, buyers, list, tiers, price, next, best, seats: best?.buyers ?? 10 };
+}
+
+// Slim bar toward the biggest tier, with a tick at each price break.
+function Progress({ p }: { p: Product }) {
+  const { buyers, seats, tiers } = stats(p);
   return (
-    <article className="card reveal group flex flex-col overflow-hidden text-center transition-transform duration-300 ease-out hover:-translate-y-1">
-      <div className="relative overflow-hidden">
-        <Image src={`/products/${photo.file}.jpg`} alt={p.name} width={900} height={675} sizes="(min-width: 768px) 30vw, 90vw"
-          className="aspect-[16/10] w-full object-cover grayscale transition-[transform,filter] duration-500 ease-out group-hover:scale-[1.03] group-hover:grayscale-0" />
-        <span className="absolute left-4 top-4 rounded-full bg-black/55 px-3 py-1 text-xs font-medium backdrop-blur-md">
+    <div className="relative h-1 rounded-full bg-white/15" role="img" aria-label={`${buyers} of ${seats} buyers`}>
+      <span className="absolute inset-y-0 left-0 rounded-full bg-ink" style={{ width: `${(buyers / seats) * 100}%` }} />
+      {tiers.slice(0, -1).map(t => (
+        <span key={t.buyers} className="absolute -top-1 h-3 w-0.5 -translate-x-1/2 rounded-full bg-white/50" style={{ left: `${(t.buyers / seats) * 100}%` }} />
+      ))}
+    </div>
+  );
+}
+
+const Photo = ({ p, sizes, className }: { p: Product; sizes: string; className: string }) => (
+  <Image src={`/products/${photos[p.id].file}.jpg`} alt={p.name} fill sizes={sizes}
+    className={`object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04] ${className}`} />
+);
+
+// Every price the group can reach, left to right: done steps lit, the current one solid, the next one outlined.
+function Ladder({ p }: { p: Product }) {
+  const { buyers, list, tiers, price } = stats(p);
+  const steps = [{ buyers: 1, price: list }, ...tiers];
+  return (
+    <ol className="mt-6 grid gap-2" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-label="Price by group size">
+      {steps.map(t => {
+        const reached = buyers >= t.buyers || t.buyers === 1;
+        const now = t.price === price;
+        return (
+          <li key={t.buyers} className={`rounded-xl px-3 py-2.5 ${now ? "bg-ink text-black" : reached ? "bg-raised" : "shadow-[inset_0_0_0_1px_var(--line)]"}`}>
+            <p className="text-lg font-medium tabular-nums">${t.price}</p>
+            <p className={`text-xs ${now ? "text-black/60" : "text-muted"}`}>{t.buyers === 1 ? "solo" : `${t.buyers}+ buyers`}{now ? " · now" : ""}</p>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+// The group closest to its next price: big photo, the numbers, one action.
+function Featured({ p, onJoin }: { p: Product; onJoin: () => void }) {
+  const { deal, buyers, list, price, next, best, seats } = stats(p);
+  return (
+    <article className="card reveal group grid overflow-hidden md:grid-cols-[1.25fr_1fr]">
+      <div className="relative min-h-72 overflow-hidden md:min-h-[26rem]">
+        <Photo p={p} sizes="(min-width: 768px) 55vw, 100vw" className="" />
+        <span className="absolute left-4 top-4 rounded-full bg-black/55 px-3 py-1 text-xs font-medium backdrop-blur-md">Filling fastest</span>
+      </div>
+      <div className="flex flex-col p-6 sm:p-9">
+        <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted">{photos[p.id].tag} · {deal ? `ends in ${timeLeft(deal.ends_in_ms)}` : "new group"}</p>
+        <h3 className="mt-3 text-balance text-3xl font-medium leading-tight tracking-tight sm:text-4xl">{p.name}</h3>
+        <p className="mt-1 text-muted">by {p.seller}</p>
+        <div className="mt-8 flex items-end gap-3">
+          <span className="text-5xl font-medium tabular-nums tracking-tight">${price}</span>
+          <span className="pb-1.5 text-muted">{price < list ? <s>${list}</s> : "solo price"}</span>
+        </div>
+        <Ladder p={p} />
+        <div className="mt-auto pt-8">
+          <Progress p={p} />
+          <p className="mt-3 text-sm text-muted">{buyers} of {seats} joined · {next ? `${next.buyers - buyers} more unlock $${next.price}` : "best price unlocked"}</p>
+          <button type="button" onClick={onJoin} className="btn press mt-6 px-6 py-3">{deal ? "Join this group" : "Start a group"}</button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+// Rail tile: tall photo with the name over a gradient, the price line and progress below.
+function Tile({ p, onJoin }: { p: Product; onJoin: () => void }) {
+  const { deal, buyers, list, price, next, best, seats } = stats(p);
+  return (
+    <article className="card group flex w-[78vw] shrink-0 snap-start flex-col overflow-hidden transition-transform duration-300 ease-out hover:-translate-y-1 sm:w-[19rem]">
+      <div className="relative aspect-square overflow-hidden">
+        <Photo p={p} sizes="(min-width: 640px) 19rem, 78vw" className="" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+        <span className="absolute left-3 top-3 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium backdrop-blur-md">
           {deal ? `Ends in ${timeLeft(deal.ends_in_ms)}` : "New group"}
         </span>
+        <div className="absolute inset-x-0 bottom-0 p-5">
+          <p className="text-xs font-medium uppercase tracking-[0.1em] text-white/60">{photos[p.id].tag}</p>
+          <h3 className="mt-1 text-xl font-medium leading-tight tracking-tight">{p.name}</h3>
+        </div>
       </div>
-
-      <div className="flex flex-1 flex-col items-center px-6 pb-6 pt-5">
-        <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted">{photo.tag}</p>
-        <h3 className="mt-1.5 text-balance text-xl font-medium leading-tight tracking-tight">{p.name}</h3>
-        <p className="mt-0.5 text-sm text-muted">by {p.seller}</p>
-
-        <p className="mt-4 tabular-nums">
-          <span className="text-lg font-medium">${price}</span>
-          {price < list ? <s className="ml-1.5 text-muted">${list}</s> : <span className="text-muted"> solo</span>}
-          {best && <span className="text-sm text-muted"> · ${best.price} at {best.buyers}</span>}
-        </p>
-
-        {/* Progress toward the biggest tier, with a tick at each price break. */}
-        <div className="mt-auto w-full max-w-64 pt-4">
-          <div className="relative h-1.5 rounded-full bg-white/10" role="img" aria-label={`${buyers} of ${seats} buyers`}>
-            <span className="absolute inset-y-0 left-0 rounded-full bg-ink transition-[width] duration-500" style={{ width: `${(buyers / seats) * 100}%` }} />
-            {tiers.slice(0, -1).map(t => (
-              <span key={t.buyers} className="absolute -top-1 h-3.5 w-0.5 -translate-x-1/2 rounded-full bg-white/40" style={{ left: `${(t.buyers / seats) * 100}%` }} />
-            ))}
-          </div>
-          <p className="mt-2.5 text-sm text-muted">
-            {buyers} of {seats} joined · {next ? `${next.buyers - buyers} more unlock $${next.price}` : "best price unlocked"}
-          </p>
+      <div className="flex flex-1 flex-col gap-4 p-5">
+        <div className="flex items-baseline justify-between gap-3 tabular-nums">
+          <p><span className="text-2xl font-medium tracking-tight">${price}</span>
+            {price < list ? <s className="ml-1.5 text-sm text-muted">${list}</s> : <span className="text-sm text-muted"> solo</span>}</p>
+          {best && <p className="text-sm text-muted">{price < list ? `Save $${list - price}` : `$${best.price} at ${best.buyers}`}</p>}
         </div>
-
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-          <button type="button" onClick={onJoin} className="btn press px-5 py-2 text-sm">{deal ? "Join group" : "Start a group"}</button>
-          <a href="#how" className="text-sm text-ink/80 hover:text-ink hover:underline">How it works ›</a>
+        <div>
+          <Progress p={p} />
+          <p className="mt-2.5 text-xs text-muted">{buyers} of {seats} · {next ? `${next.buyers - buyers} more unlock $${next.price}` : "best price unlocked"}</p>
         </div>
+        <button type="button" onClick={onJoin} className="btn press mt-auto justify-center py-2.5 text-sm">{deal ? "Join group" : "Start a group"}</button>
       </div>
     </article>
   );
@@ -179,6 +234,8 @@ export function Groups() {
   const [products, setProducts] = useState<Product[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [joining, setJoining] = useState<Product | null>(null);
+  const [tag, setTag] = useState("All");
+  const rail = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Refresh every 10 s so counts move while the page is open (and while the demo clock runs).
@@ -195,11 +252,47 @@ export function Groups() {
       {failed ? "Groups are unavailable right now. Is the backend running?" : "Loading groups…"}
     </p>
   );
+
+  // Featured: the group with the most buyers (ties: fewest still needed for the next price).
+  const shown = products.filter(p => tag === "All" || photos[p.id].tag === tag);
+  const ranked = [...shown].sort((a, b) => stats(b).buyers - stats(a).buyers);
+  const [top, ...rest] = ranked;
+  const tags = ["All", ...new Set(products.map(p => photos[p.id].tag))];
+  const scroll = (dir: number) => rail.current?.scrollBy({ left: dir * (rail.current.clientWidth * 0.8), behavior: "smooth" });
+  const arrow = "press grid size-10 place-items-center rounded-full shadow-[inset_0_0_0_1px_var(--line)] hover:bg-white/5";
+
   return (
     <>
-      <div className="mt-12 grid gap-5 md:grid-cols-3">
-        {products.map(p => <GroupCard key={p.id} p={p} onJoin={() => setJoining(p)} />)}
+      <div className="mt-10 flex flex-wrap gap-2" role="group" aria-label="Filter by category">
+        {tags.map(t => (
+          <button key={t} type="button" onClick={() => setTag(t)} aria-pressed={tag === t}
+            className={`press rounded-full px-4 py-1.5 text-sm ${tag === t ? "bg-ink text-black" : "text-muted shadow-[inset_0_0_0_1px_var(--line)] hover:text-ink"}`}>
+            {t}
+          </button>
+        ))}
       </div>
+
+      {top && <div className="mt-6"><Featured p={top} onJoin={() => setJoining(top)} /></div>}
+
+      {rest.length > 0 && (
+        <>
+          <div className="mt-12 flex items-end justify-between gap-4">
+            <p className="text-xl font-medium tracking-tight">More groups <span className="text-muted">· {rest.length}</span></p>
+            <div className="hidden gap-2 sm:flex">
+              <button type="button" onClick={() => scroll(-1)} aria-label="Previous groups" className={arrow}>
+                <svg viewBox="0 0 16 16" className="size-4" aria-hidden><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+              <button type="button" onClick={() => scroll(1)} aria-label="Next groups" className={arrow}>
+                <svg viewBox="0 0 16 16" className="size-4" aria-hidden><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+            </div>
+          </div>
+          {/* Native scroll snap: swipe on touch, arrows or trackpad on desktop. */}
+          <div ref={rail} className="mt-5 -mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-6 px-6 pb-4 [mask-image:linear-gradient(90deg,#000_88%,transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {rest.map(p => <Tile key={p.id} p={p} onJoin={() => setJoining(p)} />)}
+          </div>
+        </>
+      )}
       <JoinDialog p={joining} onClose={() => setJoining(null)} />
     </>
   );

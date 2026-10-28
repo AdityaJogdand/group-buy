@@ -98,7 +98,7 @@ const seat = (on: boolean) => <span className={`aspect-square rounded-[3px] ${on
 function StepMock({ n }: { n: number }) {
   if (n === 0) return (
     <div className="relative mt-auto overflow-hidden rounded-xl">
-      <Image src="/products/audio.jpg" alt="" width={400} height={300} className="aspect-[4/3] w-full object-cover opacity-80 grayscale" />
+      <Image src="/products/audio.jpg" alt="" width={400} height={300} className="aspect-[4/3] w-full object-cover" />
       <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1.5 text-sm backdrop-blur">Headphones · $300 at 10</span>
     </div>
   );
