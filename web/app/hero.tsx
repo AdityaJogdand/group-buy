@@ -39,7 +39,7 @@ export function Hero() {
           Pool with strangers for the bulk price. PayPal holds your max; everyone pays the group price, or nobody pays.
         </p>
         <div className="intro mt-9 flex flex-wrap justify-center gap-3 [--d:560ms]">
-          <a href="#groups" className="btn press px-6 py-3">Browse groups</a>
+          <a href="/listed-product" className="btn press px-6 py-3">Browse groups</a>
           <a href="#claude" className="btn-ghost press px-6 py-3">Use with Claude</a>
         </div>
         <LiveCount />

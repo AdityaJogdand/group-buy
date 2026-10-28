@@ -26,10 +26,10 @@ export function Nav() {
         <Logo />
         <div className="hidden items-center gap-7 text-sm text-ink/70 md:flex">
           <a href="/#how" className="hover:text-ink">How it works</a>
-          <a href="/#groups" className="hover:text-ink">Groups</a>
+          <a href="/listed-product" className="hover:text-ink">Groups</a>
           <a href="/#claude" className="hover:text-ink">Use with Claude</a>
         </div>
-        <a href="/#groups" className="btn press whitespace-nowrap px-4 py-1.5 text-sm">Join a group</a>
+        <a href="/listed-product" className="btn press whitespace-nowrap px-4 py-1.5 text-sm">Join a group</a>
       </nav>
     </header>
   );
@@ -47,5 +47,16 @@ export function Footer() {
         </p>
       </div>
     </footer>
+  );
+}
+
+// Section header: tag pill, left-aligned title fading grey to white, one line under it.
+export function Head({ tag, title, sub, center }: { tag: string; title: React.ReactNode; sub: string; center?: boolean }) {
+  return (
+    <div className={`reveal max-w-2xl ${center ? "mx-auto text-center" : ""}`}>
+      <span className="tag"><LogoMark className="h-2.5 w-4" /> {tag}</span>
+      <h2 className="display text-fade mt-5 pb-1 text-[clamp(2.25rem,4.6vw,3.5rem)]">{title}</h2>
+      <p className={`mt-3 max-w-xl text-muted ${center ? "mx-auto" : ""}`}>{sub}</p>
+    </div>
   );
 }

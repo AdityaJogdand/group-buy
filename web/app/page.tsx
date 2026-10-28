@@ -1,20 +1,8 @@
-import Image from "next/image";
 import { Hero } from "./hero";
 import { CopyButton } from "./copy-command";
-import { Groups } from "./groups";
 import { Ask } from "./ask";
-import { Nav, Footer, LogoMark } from "./nav";
+import { Nav, Footer, Head } from "./nav";
 
-// Section header: tag pill, left-aligned title fading grey to white, one line under it.
-function Head({ tag, title, sub, center }: { tag: string; title: React.ReactNode; sub: string; center?: boolean }) {
-  return (
-    <div className={`reveal max-w-2xl ${center ? "mx-auto text-center" : ""}`}>
-      <span className="tag"><LogoMark className="h-2.5 w-4" /> {tag}</span>
-      <h2 className="display text-fade mt-5 pb-1 text-[clamp(2.25rem,4.6vw,3.5rem)]">{title}</h2>
-      <p className={`mt-3 max-w-xl text-muted ${center ? "mx-auto" : ""}`}>{sub}</p>
-    </div>
-  );
-}
 
 // Inline stroke icons (no emoji, no icon font).
 const icon = {
@@ -92,47 +80,6 @@ function PriceChart() {
   );
 }
 
-// The four steps, each with a small working-looking piece of the product.
-const seat = (on: boolean) => <span className={`aspect-square rounded-[3px] ${on ? "bg-ink" : "bg-white/10"}`} />;
-
-function StepMock({ n }: { n: number }) {
-  if (n === 0) return (
-    <div className="relative mt-auto overflow-hidden rounded-xl">
-      <Image src="/products/audio.jpg" alt="" width={400} height={300} className="aspect-[4/3] w-full object-cover" />
-      <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1.5 text-sm backdrop-blur">Headphones · $300 at 10</span>
-    </div>
-  );
-  if (n === 1) return (
-    <div className="mt-auto rounded-2xl bg-raised p-5 shadow-[inset_0_0_0_1px_var(--line)]">
-      <div className="flex justify-between text-xs uppercase tracking-wider text-muted"><span>PayPal hold</span><span>Authorized</span></div>
-      <p className="mt-3 text-4xl font-medium tabular-nums tracking-tight">$350.00</p>
-      <p className="mt-1.5 text-sm text-muted">Held, not charged</p>
-    </div>
-  );
-  if (n === 2) return (
-    <div className="mt-auto">
-      <div className="grid grid-cols-10 gap-1.5">{Array.from({ length: 25 }, (_, i) => <span key={i} className="contents">{seat(i < 14)}</span>)}</div>
-      <p className="mt-4 text-sm text-muted">14 joined · 11 more unlock $270</p>
-    </div>
-  );
-  return (
-    <ul className="mt-auto grid gap-2 text-sm">
-      {["Buyer 1", "Buyer 2", "Buyer 3"].map((b, i) => (
-        <li key={b} className={`flex justify-between rounded-xl px-4 py-3 ${i === 1 ? "bg-white/10" : "bg-raised"}`}>
-          <span className="text-muted">{b}</span><span className="tabular-nums">$300 captured</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-const steps = [
-  { title: "Pick a group", body: "A product, a deadline, a solo price and cheaper prices as buyers join." },
-  { title: "Hold your max", body: "PayPal holds the most you'd pay. It's a hold, not a charge." },
-  { title: "The group fills", body: "Every new buyer pushes the price down for everyone already in." },
-  { title: "Everyone pays the same", body: "At the deadline all holds are captured at one price, or all released." },
-];
-
 // The life of a hold, as PayPal actually runs it (lib/deals.ts): authorize, then capture at the group price or void.
 const outcomes = [
   { step: "01", title: "Held", body: "You approve in PayPal. Your max is authorized, not charged.",
@@ -189,28 +136,6 @@ export default function Landing() {
         </section>
 
         <section id="how" className={section}>
-          <div className="container-x max-w-[1328px]!">
-            <Head tag="Pick · Hold · Fill · Pay" title="How it works" sub="Four steps, and no step charges you more than you agreed to." />
-            <ol className="mx-auto mt-14 grid max-w-[1280px] gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {steps.map((s, i) => (
-                <li key={s.title} className="card reveal flex min-h-[32rem] flex-col p-6 sm:p-7">
-                  <h3 className="text-balance text-center text-2xl font-medium tracking-tight">{s.title}</h3>
-                  <p className="mt-3 text-pretty text-center text-base leading-relaxed text-muted">{s.body}</p>
-                  <div className="mt-6 flex flex-1 flex-col"><StepMock n={i} /></div>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        <section id="groups" className={section}>
-          <div className="container-x">
-            <Head tag="Filling now" title="Join a group" sub="Pick a group below, or tap Ask AI and say what you want." />
-            <Groups />
-          </div>
-        </section>
-
-        <section className={section}>
           <div className="container-x">
             <Head tag="The guarantee" title={<>Held. Charged once.<br />Or released.</>} sub="Holds are PayPal authorizations, not payments. Every group ends one of two ways, and neither can charge you more than you approved." />
             <ol className="relative mt-14 grid gap-4 lg:grid-cols-3">

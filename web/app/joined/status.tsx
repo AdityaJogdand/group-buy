@@ -18,7 +18,7 @@ function Message({ title, body }: { title: string; body: string }) {
     <div className="max-w-2xl">
       <h1 className={h1}>{title}</h1>
       <p className="mt-6 text-2xl leading-snug text-muted">{body}</p>
-      <a href="/#groups" className={`${primary} mt-10`}>Back to groups</a>
+      <a href="/listed-product" className={`${primary} mt-10`}>Back to groups</a>
     </div>
   );
 }
@@ -150,7 +150,7 @@ export function Status() {
         </p>
         <p className="mt-6 max-w-xl text-lg text-muted">Share the group: every buyer who joins lowers the price for you too.</p>
         <div className="mt-10 flex flex-wrap items-center gap-3">
-          <a href="/#groups" className={primary}>Back to groups</a>
+          <a href="/listed-product" className={primary}>Back to groups</a>
           <CopyLink />
         </div>
       </div>
