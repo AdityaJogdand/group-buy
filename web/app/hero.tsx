@@ -28,8 +28,7 @@ export function Hero() {
       </svg>
 
       <div className="container-x flex min-h-[calc(100svh-3.5rem-5rem)] flex-col items-center justify-center py-16 text-center">
-        <span className="tag"><span className="size-1.5 rounded-full bg-ink" /> Holds by PayPal · Built for MCP</span>
-        <h1 className="display mt-7 text-[clamp(2.75rem,6.4vw,5rem)]">
+        <h1 className="display text-[clamp(2.75rem,6.4vw,5rem)]">
           Every buyer lowers the price.<br /><span className="text-muted">Pay together, or not at all.</span>
         </h1>
         <p className="mt-6 max-w-xl text-lg text-muted">

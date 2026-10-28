@@ -27,6 +27,8 @@ export function timeLeft(ms: number) {
   return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${Math.max(1, m)}m`;
 }
 
+// Apple store-style tile: product photo full-bleed on top, then centered name, price line, a slim progress bar
+// with the tiers marked, and two centered actions.
 function GroupCard({ p, onJoin }: { p: Product; onJoin: () => void }) {
   const photo = photos[p.id];
   const deal = [...p.open_deals].sort((a, b) => b.buyers - a.buyers)[0];
@@ -35,39 +37,45 @@ function GroupCard({ p, onJoin }: { p: Product; onJoin: () => void }) {
   const tiers = p.group_prices.map(t => ({ buyers: t.buyers, price: dollars(t.price) }));
   const price = tiers.reduce((x, t) => (buyers >= t.buyers ? t.price : x), list);
   const next = tiers.find(t => t.buyers > buyers);
-  const seats = tiers.at(-1)?.buyers ?? 10;
+  const best = tiers.at(-1);
+  const seats = best?.buyers ?? 10;
   return (
-    <article className="card reveal group flex flex-col p-5 transition-transform duration-300 ease-out hover:-translate-y-1 sm:p-6">
-      <p className="text-sm text-muted">
-        {photo.tag} · {deal ? `ends in ${timeLeft(deal.ends_in_ms)}` : "no group yet"}
-      </p>
-      <h3 className="mt-1.5 text-balance md:min-h-[2.2em] text-[1.5rem] font-medium leading-[1.15] tracking-[-0.03em]">{p.name}</h3>
-      <p className="mt-1 text-lg text-muted">by {p.seller}</p>
-
-      <div className="my-7 overflow-hidden rounded-[20px]">
-        <Image src={`/products/${photo.file}.jpg`} alt={p.name} width={900} height={675}
-          sizes="(min-width: 768px) 30vw, 90vw"
-          className="aspect-[4/3] w-full object-cover grayscale transition-[transform,filter] duration-500 ease-out group-hover:scale-[1.04] group-hover:grayscale-0" />
+    <article className="card reveal group flex flex-col overflow-hidden text-center transition-transform duration-300 ease-out hover:-translate-y-1">
+      <div className="relative overflow-hidden">
+        <Image src={`/products/${photo.file}.jpg`} alt={p.name} width={900} height={675} sizes="(min-width: 768px) 30vw, 90vw"
+          className="aspect-[16/10] w-full object-cover grayscale transition-[transform,filter] duration-500 ease-out group-hover:scale-[1.03] group-hover:grayscale-0" />
+        <span className="absolute left-4 top-4 rounded-full bg-black/55 px-3 py-1 text-xs font-medium backdrop-blur-md">
+          {deal ? `Ends in ${timeLeft(deal.ends_in_ms)}` : "New group"}
+        </span>
       </div>
 
-      <div className="mt-auto">
-        <div className="grid grid-cols-15 gap-[3px]" role="img" aria-label={`${buyers} of ${seats} buyers`}>
-          {Array.from({ length: seats }, (_, i) => (
-            <span key={i} className={`aspect-square rounded-[3px] ${i < buyers ? "bg-ink" : "bg-white/10"}`} />
-          ))}
-        </div>
-        <p className="mt-3 text-base text-muted">
-          {buyers} joined · {next ? `${next.buyers - buyers} more unlock $${next.price}` : "best price unlocked"}
+      <div className="flex flex-1 flex-col items-center px-6 pb-6 pt-5">
+        <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted">{photo.tag}</p>
+        <h3 className="mt-1.5 text-balance text-xl font-medium leading-tight tracking-tight">{p.name}</h3>
+        <p className="mt-0.5 text-sm text-muted">by {p.seller}</p>
+
+        <p className="mt-4 tabular-nums">
+          <span className="text-lg font-medium">${price}</span>
+          {price < list ? <s className="ml-1.5 text-muted">${list}</s> : <span className="text-muted"> solo</span>}
+          {best && <span className="text-sm text-muted"> · ${best.price} at {best.buyers}</span>}
         </p>
 
-        <div className="flex items-end justify-between gap-4 pt-7">
-          <p className="leading-tight">
-            <span className="block text-3xl font-medium tabular-nums tracking-tight">${price}</span>
-            <span className="text-base text-muted">{price < list ? <>each · <s>${list}</s> solo</> : "solo price"}</span>
+        {/* Progress toward the biggest tier, with a tick at each price break. */}
+        <div className="mt-auto w-full max-w-64 pt-4">
+          <div className="relative h-1.5 rounded-full bg-white/10" role="img" aria-label={`${buyers} of ${seats} buyers`}>
+            <span className="absolute inset-y-0 left-0 rounded-full bg-ink transition-[width] duration-500" style={{ width: `${(buyers / seats) * 100}%` }} />
+            {tiers.slice(0, -1).map(t => (
+              <span key={t.buyers} className="absolute -top-1 h-3.5 w-0.5 -translate-x-1/2 rounded-full bg-white/40" style={{ left: `${(t.buyers / seats) * 100}%` }} />
+            ))}
+          </div>
+          <p className="mt-2.5 text-sm text-muted">
+            {buyers} of {seats} joined · {next ? `${next.buyers - buyers} more unlock $${next.price}` : "best price unlocked"}
           </p>
-          <button type="button" onClick={onJoin} className="btn press px-5 py-2.5">
-            {deal ? "Join" : "Start a group"}
-          </button>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+          <button type="button" onClick={onJoin} className="btn press px-5 py-2 text-sm">{deal ? "Join group" : "Start a group"}</button>
+          <a href="#how" className="text-sm text-ink/80 hover:text-ink hover:underline">How it works ›</a>
         </div>
       </div>
     </article>
