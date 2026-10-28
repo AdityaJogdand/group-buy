@@ -4,6 +4,7 @@
 // The buyer confirms, then /api/join opens PayPal. The model only reads; nothing is held until Continue.
 // Panel slides in from the right and leaves the same way; it doesn't block the page (no scrim).
 import { useEffect, useRef, useState } from "react";
+import "./shimmer.css";
 
 type Msg = { role: "user" | "assistant"; content: string };
 type Parsed = { product_id: string; product: string; max_usd: number; list_usd: number; deadline: string | null };
@@ -72,10 +73,13 @@ export function Ask() {
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} aria-label="Ask the assistant" aria-expanded={open}
-        className={`btn press fixed bottom-5 right-5 z-40 gap-2 py-3 pl-4 pr-5 shadow-[0_12px_32px_rgba(0,0,0,0.6)] transition-[opacity,transform] duration-200 ${open ? "pointer-events-none translate-y-2 opacity-0" : ""}`}>
-        <Spark /> Ask AI
-      </button>
+      {/* The wrapper's animated gradient shows as a thin ring around the button (shimmer.css). */}
+      <span className={`shimmer fixed bottom-5 right-5 z-40 rounded-full p-[2px] transition-[opacity,transform] duration-200 ${open ? "pointer-events-none translate-y-2 opacity-0" : ""}`}>
+        <button type="button" onClick={() => setOpen(true)} aria-label="Ask the assistant" aria-expanded={open}
+          className="btn press relative gap-2 py-3 pl-4 pr-5">
+          <Spark /> Ask AI
+        </button>
+      </span>
 
       <aside aria-label="Group Buy assistant" aria-hidden={!open} inert={!open}
         className={`fixed inset-y-0 right-0 z-50 flex w-full flex-col bg-[#141414] shadow-[-24px_0_60px_rgba(0,0,0,0.6),inset_1px_0_0_var(--line)] transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] sm:w-[420px] ${

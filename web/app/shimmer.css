@@ -1,0 +1,19 @@
+/* Ask AI button: a soft light travels around its edge, with a blurred halo following it.
+   The wrapper's background is the light; the button covers its middle, so only a 2px ring shows.
+   --angle is a registered property so the conic gradient animates smoothly; reduced motion stops it. */
+@property --angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+
+.shimmer {
+  isolation: isolate;
+  background: conic-gradient(from var(--angle), rgba(255, 255, 255, 0.12) 0% 55%, rgba(255, 255, 255, 0.35) 68%, #fff 82%, rgba(255, 255, 255, 0.35) 92%, rgba(255, 255, 255, 0.12) 100%);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  animation: orbit 3.5s linear infinite;
+}
+/* Halo: the same light, blurred, behind the ring. */
+.shimmer::before {
+  content: ""; position: absolute; inset: -2px; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: inherit; filter: blur(12px); opacity: 0.6;
+}
+@keyframes orbit { to { --angle: 360deg; } }
+
+@media (prefers-reduced-motion: reduce) { .shimmer { animation: none; } }
