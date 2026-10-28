@@ -1,5 +1,6 @@
 // Hero: headline and one white action, centered in the viewport over a valley of fine lines.
 import { LiveCount } from "./groups";
+import "./intro.css";
 
 // No JS: the terrain is a static SVG generated here; motion elsewhere is CSS and stops under reduced motion.
 
@@ -31,12 +32,13 @@ export function Hero() {
 
       <div className="container-x flex min-h-[calc(100svh-3.5rem-5rem)] flex-col items-center justify-center py-16 text-center">
         <h1 className="display text-[clamp(2.75rem,6.4vw,5rem)]">
-          Every buyer lowers the price.<br /><span className="text-fade">Pay together, or not at all.</span>
+          <span className="intro inline-block">Every buyer lowers the price.</span><br />
+          <span className="intro inline-block [--d:180ms]"><span className="text-fade">Pay together, or not at all.</span></span>
         </h1>
-        <p className="mt-6 max-w-xl text-lg text-muted">
+        <p className="intro mt-6 max-w-xl text-lg text-muted [--d:420ms]">
           Pool with strangers for the bulk price. PayPal holds your max; everyone pays the group price, or nobody pays.
         </p>
-        <div className="mt-9 flex flex-wrap justify-center gap-3">
+        <div className="intro mt-9 flex flex-wrap justify-center gap-3 [--d:560ms]">
           <a href="#groups" className="btn press px-6 py-3">Browse groups</a>
           <a href="#claude" className="btn-ghost press px-6 py-3">Use with Claude</a>
         </div>

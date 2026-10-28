@@ -217,7 +217,7 @@ export function LiveCount() {
   }, []);
   if (!n || !n.groups) return null;
   return (
-    <p className="mt-6 flex items-center gap-2 text-sm text-muted">
+    <p className="intro mt-6 flex items-center gap-2 text-sm text-muted [--d:700ms]">
       <span className="relative flex size-2"><span className="absolute inset-0 animate-ping rounded-full bg-ink/60" /><span className="relative size-2 rounded-full bg-ink" /></span>
       {n.groups} {n.groups === 1 ? "group" : "groups"} filling now · {n.buyers} {n.buyers === 1 ? "buyer" : "buyers"} holding
     </p>
