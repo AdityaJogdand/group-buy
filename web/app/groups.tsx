@@ -52,28 +52,61 @@ function Progress({ p }: { p: Product }) {
   );
 }
 
-const Photo = ({ p, sizes, className }: { p: Product; sizes: string; className: string }) => (
+// zoom={false} when a parent layer does the hover zoom (the tile scales its masked layer instead).
+const Photo = ({ p, sizes, zoom = true }: { p: Product; sizes: string; zoom?: boolean }) => (
   <Image src={`/products/${photos[p.id].file}.jpg`} alt={p.name} fill sizes={sizes}
-    className={`object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04] ${className}`} />
+    className={`object-cover ${zoom ? "transition-transform duration-700 ease-out group-hover:scale-[1.04]" : ""}`} />
 );
 
-// Every price the group can reach, left to right: done steps lit, the current one solid, the next one outlined.
+// Price track: one bar from solo to the biggest tier, filled to the current buyer count. Each price break has
+// its price above and buyer count below; reached breaks are solid, the next is outlined, and a
+// glowing marker shows where the group is now.
 function Ladder({ p }: { p: Product }) {
   const { buyers, list, tiers, price } = stats(p);
-  const steps = [{ buyers: 1, price: list }, ...tiers];
+  const steps = [{ buyers: 0, price: list }, ...tiers];
+  // Breaks are spaced evenly (a 5-buyer tier next to a 0-buyer start would crowd); the fill moves linearly
+  // within each segment, so the marker still lands in the right place.
+  const at = (n: number) => {
+    const i = steps.findIndex((t, k) => k === steps.length - 1 || n < steps[k + 1].buyers);
+    const [from, to] = [steps[i], steps[i + 1]];
+    const frac = to ? (n - from.buyers) / (to.buyers - from.buyers) : 0;
+    return `${((i + frac) / (steps.length - 1)) * 100}%`;
+  };
+  // Keep the end labels inside the track instead of hanging off its edges.
+  const align = (i: number) => (i === 0 ? "" : i === steps.length - 1 ? "-translate-x-full" : "-translate-x-1/2");
   return (
-    <ol className="mt-6 grid gap-2" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-label="Price by group size">
-      {steps.map(t => {
-        const reached = buyers >= t.buyers || t.buyers === 1;
-        const now = t.price === price;
-        return (
-          <li key={t.buyers} className={`rounded-xl px-3 py-2.5 ${now ? "bg-ink text-black" : reached ? "bg-raised" : "shadow-[inset_0_0_0_1px_var(--line)]"}`}>
-            <p className="text-lg font-medium tabular-nums">${t.price}</p>
-            <p className={`text-xs ${now ? "text-black/60" : "text-muted"}`}>{t.buyers === 1 ? "solo" : `${t.buyers}+ buyers`}{now ? " · now" : ""}</p>
-          </li>
-        );
-      })}
-    </ol>
+    <div className="mt-8" role="img"
+      aria-label={`Price by group size: ${steps.map(t => `$${t.price} ${t.buyers ? `at ${t.buyers} buyers` : "solo"}`).join(", ")}. ${buyers} joined, $${price} now.`}>
+      <div className="relative h-7">
+        {steps.map((t, i) => (
+          <span key={t.buyers} style={{ left: at(t.buyers) }}
+            className={`absolute bottom-0 whitespace-nowrap text-lg font-medium tabular-nums tracking-tight ${align(i)} ${t.price === price ? "text-ink" : "text-muted"}`}>
+            ${t.price}
+          </span>
+        ))}
+      </div>
+
+      <div className="relative mt-3 h-1.5 rounded-full bg-white/10">
+        <span className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-white/40 to-white" style={{ width: at(buyers) }} />
+        {steps.slice(1).map(t => (
+          <span key={t.buyers} style={{ left: at(t.buyers) }}
+            className={`absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full ${buyers >= t.buyers ? "bg-ink" : "border-2 border-white/40 bg-surface"}`} />
+        ))}
+        {/* You are here. */}
+        <span style={{ left: at(buyers) }} className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <span className="absolute inset-0 animate-ping rounded-full bg-white/40" />
+          <span className="relative block size-4 rounded-full border-[3px] border-surface bg-ink shadow-[0_0_14px_rgba(255,255,255,0.7)]" />
+        </span>
+      </div>
+
+      <div className="relative mt-3 h-4 text-xs text-muted">
+        {steps.map((t, i) => (
+          <span key={t.buyers} style={{ left: at(t.buyers) }} className={`absolute whitespace-nowrap ${align(i)}`}>
+            {t.buyers ? `${t.buyers} buyers` : "Solo"}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -83,7 +116,7 @@ function Featured({ p, onJoin }: { p: Product; onJoin: () => void }) {
   return (
     <article className="card reveal group grid overflow-hidden md:grid-cols-[1.25fr_1fr]">
       <div className="relative min-h-72 overflow-hidden md:min-h-[26rem]">
-        <Photo p={p} sizes="(min-width: 768px) 55vw, 100vw" className="" />
+        <Photo p={p} sizes="(min-width: 768px) 55vw, 100vw" />
         <span className="absolute left-4 top-4 rounded-full bg-black/55 px-3 py-1 text-xs font-medium backdrop-blur-md">Filling fastest</span>
       </div>
       <div className="flex flex-col p-6 sm:p-9">
@@ -96,8 +129,7 @@ function Featured({ p, onJoin }: { p: Product; onJoin: () => void }) {
         </div>
         <Ladder p={p} />
         <div className="mt-auto pt-8">
-          <Progress p={p} />
-          <p className="mt-3 text-sm text-muted">{buyers} of {seats} joined · {next ? `${next.buyers - buyers} more unlock $${next.price}` : "best price unlocked"}</p>
+          <p className="text-sm text-muted">{buyers} of {seats} joined · {next ? `${next.buyers - buyers} more unlock $${next.price}` : "best price unlocked"}</p>
           <button type="button" onClick={onJoin} className="btn press mt-6 px-6 py-3">{deal ? "Join this group" : "Start a group"}</button>
         </div>
       </div>
@@ -111,8 +143,13 @@ function Tile({ p, onJoin }: { p: Product; onJoin: () => void }) {
   return (
     <article className="card group flex w-[78vw] shrink-0 snap-start flex-col overflow-hidden transition-transform duration-300 ease-out hover:-translate-y-1 sm:w-[19rem]">
       <div className="relative aspect-square overflow-hidden">
-        <Photo p={p} sizes="(min-width: 640px) 19rem, 78vw" className="" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+        {/* The photo itself fades out at the bottom (a mask, not a black overlay), so it melts into the card
+            with no seam; a light shade keeps the title readable. */}
+        {/* Zoom the masked layer as one piece on its own GPU layer; scaling the photo inside a mask flickers. */}
+        <div className="absolute inset-0 origin-top transition-transform duration-700 ease-out will-change-transform [mask-image:linear-gradient(to_bottom,#000_45%,transparent_100%)] group-hover:scale-[1.04]">
+          <Photo p={p} sizes="(min-width: 640px) 19rem, 78vw" zoom={false} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+        </div>
         <span className="absolute left-3 top-3 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium backdrop-blur-md">
           {deal ? `Ends in ${timeLeft(deal.ends_in_ms)}` : "New group"}
         </span>
@@ -121,7 +158,7 @@ function Tile({ p, onJoin }: { p: Product; onJoin: () => void }) {
           <h3 className="mt-1 text-xl font-medium leading-tight tracking-tight">{p.name}</h3>
         </div>
       </div>
-      <div className="flex flex-1 flex-col gap-4 p-5">
+      <div className="flex flex-1 flex-col gap-4 px-5 pb-5 pt-2">
         <div className="flex items-baseline justify-between gap-3 tabular-nums">
           <p><span className="text-2xl font-medium tracking-tight">${price}</span>
             {price < list ? <s className="ml-1.5 text-sm text-muted">${list}</s> : <span className="text-sm text-muted"> solo</span>}</p>
