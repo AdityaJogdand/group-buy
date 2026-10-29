@@ -1,8 +1,9 @@
-import Image from "next/image";
-import { Hero } from "./hero";
+import { HeroSection } from "./hero-section";
 import { CopyButton } from "./copy-command";
 import { Groups } from "./groups";
 import { Ask } from "./ask";
+import { IntroStory } from "./intro-story";
+import { HowSteps } from "./how-steps";
 import { Nav, Footer, LogoMark } from "./nav";
 
 // Section header: tag pill, left-aligned title fading grey to white, one line under it.
@@ -15,123 +16,6 @@ function Head({ tag, title, sub, center }: { tag: string; title: React.ReactNode
     </div>
   );
 }
-
-// Inline stroke icons (no emoji, no icon font).
-const icon = {
-  lock: <path d="M7 11V8a5 5 0 0 1 10 0v3M6 11h12v9H6z" />,
-  users: <path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm6 0a3 3 0 1 0 0-6M3 20c0-3 3-5 6-5s6 2 6 5m2-5c2 0 4 2 4 5" />,
-  chat: <path d="M4 5h16v11H9l-5 4z" />,
-};
-function Icon({ d }: { d: React.ReactNode }) {
-  return (
-    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-raised shadow-[inset_0_0_0_1px_var(--line)]">
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" aria-hidden>{d}</svg>
-    </span>
-  );
-}
-
-const features = [
-  { d: icon.lock, title: "A hold, not a charge", body: "PayPal authorizes your max. Nothing moves until the group closes." },
-  { d: icon.users, title: "One price for everyone", body: "Every buyer pays the same group price, never more than their hold." },
-  { d: icon.chat, title: "Join from your AI", body: "An MCP server: Claude finds the group, you approve in PayPal." },
-];
-
-// Price by group size for the headphones (lib/deals.ts): $350 solo, $300 from 10 buyers, $270 from 25.
-// One bar per seat; its height is the price everyone pays at that size. Seats taken in the demo group are lit.
-const NOW = 14;
-const SEATS = 25;
-const priceAt = (n: number) => (n >= 25 ? 270 : n >= 10 ? 300 : 350);
-const TIER_START = new Set([1, 10, 25]);
-
-function PriceChart() {
-  const height = (p: number) => `${15 + ((p - 250) / 100) * 80}%`; // $250 floor of the scale, so the steps read
-  return (
-    <div className="mt-auto pt-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <p>
-          <span className="block text-5xl font-medium tracking-tight tabular-nums">${priceAt(NOW)}</span>
-          <span className="text-muted">each at {NOW} buyers</span>
-        </p>
-        <div className="flex gap-2 text-sm">
-          <span className="rounded-full bg-ink px-3 py-1 font-medium text-black">Save ${350 - priceAt(NOW)}</span>
-          <span className="rounded-full px-3 py-1 text-muted shadow-[inset_0_0_0_1px_var(--line)]">$270 at 25</span>
-        </div>
-      </div>
-
-      <div className="mt-8 flex h-56 items-end gap-[3px] sm:gap-1" role="img"
-        aria-label={`Price per buyer: $350 alone, $300 from 10 buyers, $270 from 25. The demo group has ${NOW} buyers.`}>
-        {Array.from({ length: SEATS }, (_, i) => {
-          const n = i + 1;
-          const p = priceAt(n);
-          const now = n === NOW;
-          return (
-            <div key={n} className="relative flex h-full flex-1 items-end">
-              {TIER_START.has(n) && (
-                <span className={`absolute whitespace-nowrap text-xs tabular-nums text-muted ${n === SEATS ? "right-0" : "left-0"}`} style={{ bottom: `calc(${height(p)} + 8px)` }}>
-                  ${p}
-                </span>
-              )}
-              {now && (
-                <span className="absolute left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-2 py-0.5 text-xs font-medium text-black sm:block"
-                  style={{ bottom: `calc(${height(p)} + 10px)` }}>
-                  {NOW} now
-                </span>
-              )}
-              <span style={{ height: height(p) }} className={`w-full rounded-t-[4px] ${
-                now ? "bg-ink shadow-[0_0_18px_rgba(255,255,255,0.55)]"
-                : n < NOW ? "bg-gradient-to-b from-white/75 to-white/25"
-                : "bg-white/[0.07]"}`} />
-            </div>
-          );
-        })}
-      </div>
-      <div className="mt-3 flex justify-between border-t border-line pt-2 text-xs tabular-nums text-muted">
-        <span>1 buyer</span><span>{SEATS} buyers</span>
-      </div>
-    </div>
-  );
-}
-
-// The four steps, each with a small working-looking piece of the product.
-const seat = (on: boolean) => <span className={`aspect-square rounded-[3px] ${on ? "bg-ink" : "bg-white/10"}`} />;
-
-function StepMock({ n }: { n: number }) {
-  if (n === 0) return (
-    <div className="relative mt-auto overflow-hidden rounded-xl">
-      <Image src="/products/audio.jpg" alt="" width={400} height={300} className="aspect-[4/3] w-full object-cover" />
-      <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1.5 text-sm backdrop-blur">Headphones · $300 at 10</span>
-    </div>
-  );
-  if (n === 1) return (
-    <div className="mt-auto rounded-2xl bg-raised p-5 shadow-[inset_0_0_0_1px_var(--line)]">
-      <div className="flex justify-between text-xs uppercase tracking-wider text-muted"><span>PayPal hold</span><span>Authorized</span></div>
-      <p className="mt-3 text-4xl font-medium tabular-nums tracking-tight">$350.00</p>
-      <p className="mt-1.5 text-sm text-muted">Held, not charged</p>
-    </div>
-  );
-  if (n === 2) return (
-    <div className="mt-auto">
-      <div className="grid grid-cols-10 gap-1.5">{Array.from({ length: 25 }, (_, i) => <span key={i} className="contents">{seat(i < 14)}</span>)}</div>
-      <p className="mt-4 text-sm text-muted">14 joined · 11 more unlock $270</p>
-    </div>
-  );
-  return (
-    <ul className="mt-auto grid gap-2 text-sm">
-      {["Buyer 1", "Buyer 2", "Buyer 3"].map((b, i) => (
-        <li key={b} className={`flex justify-between rounded-xl px-4 py-3 ${i === 1 ? "bg-white/10" : "bg-raised"}`}>
-          <span className="text-muted">{b}</span><span className="tabular-nums">$300 captured</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-const steps = [
-  { title: "Pick a group", body: "A product, a deadline, a solo price and cheaper prices as buyers join." },
-  { title: "Hold your max", body: "PayPal holds the most you'd pay. It's a hold, not a charge." },
-  { title: "The group fills", body: "Every new buyer pushes the price down for everyone already in." },
-  { title: "Everyone pays the same", body: "At the deadline all holds are captured at one price, or all released." },
-];
 
 // The life of a hold, as PayPal actually runs it (lib/deals.ts): authorize, then capture at the group price or void.
 const outcomes = [
@@ -162,44 +46,14 @@ export default function Landing() {
     <>
       <Nav />
       <main>
-        <Hero />
+        <HeroSection />
 
-        <section className={section}>
-          <div className="container-x">
-            <Head tag="Introduction" title="What is Group Buy?" sub="Group buying where the money is held, not spent, until the group is real." />
-            <div className="mx-auto mt-14 grid max-w-[1280px] gap-4 lg:grid-cols-[1.45fr_1fr]">
-              <div className="card reveal flex flex-col p-6 sm:p-8">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="text-2xl font-medium tracking-tight">The price steps down as the group grows</h3>
-                  <span className="text-sm text-muted">Noise-cancelling headphones</span>
-                </div>
-                <p className="mt-2 text-muted">Everyone in the group pays the lowest price it reaches, including the people who joined first.</p>
-                <PriceChart />
-              </div>
-              <div className="grid gap-4">
-                {features.map(f => (
-                  <div key={f.title} className="card reveal flex gap-5 p-6 sm:p-7">
-                    <Icon d={f.d} />
-                    <div><h3 className="text-xl font-medium tracking-tight">{f.title}</h3><p className="mt-1.5 leading-relaxed text-muted">{f.body}</p></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
+        <IntroStory head={<Head tag="Introduction" title="What is Group Buy?" sub="Group buying where the money is held, not spent, until the group is real." />} />
 
         <section id="how" className={section}>
           <div className="container-x max-w-[1328px]!">
             <Head tag="Pick · Hold · Fill · Pay" title="How it works" sub="Four steps, and no step charges you more than you agreed to." />
-            <ol className="mx-auto mt-14 grid max-w-[1280px] gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {steps.map((s, i) => (
-                <li key={s.title} className="card reveal flex min-h-[32rem] flex-col p-6 sm:p-7">
-                  <h3 className="text-balance text-center text-2xl font-medium tracking-tight">{s.title}</h3>
-                  <p className="mt-3 text-pretty text-center text-base leading-relaxed text-muted">{s.body}</p>
-                  <div className="mt-6 flex flex-1 flex-col"><StepMock n={i} /></div>
-                </li>
-              ))}
-            </ol>
+            <HowSteps />
           </div>
         </section>
 
