@@ -42,7 +42,7 @@ Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties
 ## Phase 2: AI agents (Oct 24–30)
 - [ ] Intake: free text → `{product, max, deadline}`, one follow-up when unclear
 - [ ] Grouping: join an open deal or open a new one
-- [ ] ⏸ On hold (Oct 21): Negotiation: buyer-pool agent vs seller agent, max 4 rounds, transcript stored
+- [x] Negotiation (Oct 30): pool agent vs seller agent at close, code referee (floor ≤ price ≤ earned tier, monotonic, ≤ 4 rounds), transcript in events (`lib/negotiate.ts`; `npm run test:negotiate` + `test:negotiate:paypal` → PASS, real captures at the negotiated price)
 - [ ] Code guard: price within `[floor, list]` and ≤ every captured hold
 - [x] MCP server (FastMCP, `server.ts`, `npm run test:mcp` → PASS): `find_deal`, `join_deal` (returns the PayPal approval link; a human still approves), `deal_status`, `leave_deal`; Streamable HTTP, deployed with the app. PayPal Agent Toolkit 1.11 has `create_order` but no authorize/capture/void tools, so the hold logic stays in `lib/deals.ts`
 - [ ] Test sets: 30 buyer requests with expected parse; 50 negotiation runs

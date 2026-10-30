@@ -2,6 +2,7 @@
 // price within [floor, list], charge <= each buyer's hold, all holds settle together.
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { paypal } from './paypal.ts';
+import { negotiate, llmAgent, payers, type Agent, type Side } from './negotiate.ts';
 
 export type DealStatus = 'OPEN' | 'CLOSING' | 'CAPTURED' | 'EXPIRED';
 export type HoldStatus = 'PENDING' | 'HELD' | 'CAPTURED' | 'CAPTURE_FAILED' | 'DROPPED' | 'LEFT' | 'VOIDED' | 'EXPIRED';
@@ -14,7 +15,7 @@ export type Product = {
 // so a seller editing prices later can't change a deal people already joined.
 export type Deal = {
   id: number; product_id: string; product: string; list_cents: number; floor_cents: number;
-  target: number; status: DealStatus; price_cents: number | null; closes_at: string;
+  target: number; status: DealStatus; price_cents: number | null; closes_at: string; tiers_json: string | null;
 };
 export type Hold = {
   id: number; deal_id: number; buyer: string; max_cents: number; order_id: string;
@@ -36,12 +37,14 @@ db.exec(`
   create table if not exists events (
     id integer primary key, deal_id int, at text not null default (datetime('now')), type text not null, data text);
 `);
+// Deals copy their tiers at open (like list and floor), so seller edits never change a deal people joined.
+// Added after launch: older databases get the column here; their deals fall back to the product's tiers.
+if (!(db.prepare("select 1 from pragma_table_info('deals') where name = 'tiers_json'").get())) db.exec('alter table deals add column tiers_json text');
 
 const usd = (cents: number) => (cents / 100).toFixed(2);
 const log = (dealId: number, type: string, data: object) =>
   db.prepare('insert into events (deal_id, type, data) values (?, ?, ?)').run(dealId, type, JSON.stringify(data));
 // Demo catalog. `insert or ignore`: re-seeding on every boot never duplicates or overwrites seller edits.
-// ponytail: seed lives in code; move to a seller form when the dashboard edits products.
 // Sellers and products are made up; no real brands.
 const CATALOG: Product[] = [
   { id: 'ux-course', seller: 'Lena', name: 'UX Design Course',
@@ -99,8 +102,8 @@ export function createDeal({ productId, target, closesAt }: { productId: string;
   if (!product) throw new Error(`unknown product ${productId}`);
   if (!(Number.isInteger(target) && target > 0)) throw new Error('bad deal terms');
   const { lastInsertRowid } = db.prepare(
-    'insert into deals (product_id, list_cents, floor_cents, target, closes_at) values (?, ?, ?, ?, ?)',
-  ).run(productId, product.list_cents, product.floor_cents, target, closesAt.toISOString());
+    'insert into deals (product_id, list_cents, floor_cents, target, closes_at, tiers_json) values (?, ?, ?, ?, ?, ?)',
+  ).run(productId, product.list_cents, product.floor_cents, target, closesAt.toISOString(), JSON.stringify(product.tiers));
   const id = Number(lastInsertRowid);
   log(id, 'DEAL_OPENED', { productId, listCents: product.list_cents, target });
   return id;
@@ -205,19 +208,84 @@ export function tierPrice(deal: Pick<Deal, 'target' | 'floor_cents' | 'list_cent
   return reached.length ? Math.min(...reached.map(t => t.price_cents)) : null;
 }
 
-// Call on a timer; pass a fake `now` for the demo clock. At closes_at an open deal captures at the
-// best tier it reached, else expires. Also resumes half-voided expired deals.
-// ponytail: tiers are read from the product at close, not copied at open; copy them if sellers edit tiers mid-deal.
+// Settle one deal now: find the best tier its holds reach (tiers copied at open); if some holders would be
+// released at that price, the pool and seller agents negotiate (lib/negotiate.ts) for a lower one that keeps
+// them in. Then capture at the agreed price, or expire (void every hold) if no tier was reached.
+// Used by the clock at closes_at and by the seller's "Close now". `agents` is swappable for tests.
 // ponytail: a crash mid-close leaves the deal CLOSING; re-run closeDeal by hand (request IDs keep it safe).
+const settling = new Set<number>();
+export async function settleDeal(id: number, agents: Record<Side, Agent> | null = process.env.LLM_BASE_URL ? { pool: llmAgent, seller: llmAgent } : null) {
+  if (settling.has(id)) throw new Error('This group is already closing.');
+  settling.add(id);
+  try {
+    const deal = mustGetDeal(id);
+    const tiers: Tier[] = deal.tiers_json ? JSON.parse(deal.tiers_json) : getProduct(deal.product_id)?.tiers ?? [];
+    const maxes = getHolds(id).filter(h => h.status === 'HELD').map(h => h.max_cents);
+    let price = deal.status === 'OPEN' ? tierPrice(deal, tiers, maxes) : null;
+    if (price && agents && maxes.some(m => m < price! && m >= deal.floor_cents)) {
+      const from = price;
+      try {
+        const r = await negotiate({ product: deal.product, list_cents: deal.list_cents, floor_cents: deal.floor_cents,
+          start_cents: from, maxes, target: deal.target }, agents);
+        price = r.price_cents;
+        log(id, 'NEGOTIATED', { from_cents: from, to_cents: price, agreed: r.agreed, buyers_before: payers(maxes, from), buyers_after: payers(maxes, price), turns: r.turns });
+      } catch (e) {
+        log(id, 'NEGOTIATION_FAILED', { error: (e as Error).message, price_cents: from });
+      }
+    }
+    if (price) await closeDeal(id, price);
+    else await expireDeal(id);
+    return mustGetDeal(id);
+  } finally {
+    settling.delete(id);
+  }
+}
+
+// Call on a timer; pass a fake `now` for the demo clock. Also resumes half-voided expired deals.
 export async function settleDue(now = new Date()) {
   const due = db.prepare(`select id from deals where (status = 'OPEN' and closes_at <= ?)
     or (status = 'EXPIRED' and exists (select 1 from holds where deal_id = deals.id and status = 'HELD'))`)
     .all(now.toISOString()) as { id: number }[];
-  for (const { id } of due) {
-    const deal = mustGetDeal(id);
-    const price = deal.status === 'OPEN' && tierPrice(deal, getProduct(deal.product_id)?.tiers ?? [],
-      getHolds(id).filter(h => h.status === 'HELD').map(h => h.max_cents));
-    if (price) await closeDeal(id, price);
-    else await expireDeal(id);
+  for (const { id } of due) await settleDeal(id);
+}
+
+// Seller product rules (FRONTEND.md). Returns the first broken rule as a message for the form, or null.
+export function productError(p: { name: string; description: string; list_cents: number; floor_cents: number; tiers: Tier[] }): string | null {
+  const $ = (c: number) => `$${c / 100}`;
+  const cents = (n: unknown) => Number.isInteger(n) && (n as number) > 0;
+  if (!p.name?.trim()) return 'Name is required.';
+  if (!p.description?.trim()) return 'Description is required.';
+  if (!cents(p.list_cents)) return 'Single price must be more than $0.';
+  if (!cents(p.floor_cents)) return 'Lowest price must be more than $0.';
+  if (p.floor_cents > p.list_cents) return `Lowest price ${$(p.floor_cents)} is above the single price ${$(p.list_cents)}.`;
+  if (!Array.isArray(p.tiers) || p.tiers.length < 1 || p.tiers.length > 3) return 'Add 1 to 3 group prices.';
+  for (const [i, t] of p.tiers.entries()) {
+    if (!(Number.isInteger(t.buyers) && t.buyers >= 2)) return 'Each group price needs at least 2 buyers.';
+    if (!cents(t.price_cents)) return 'Each group price must be more than $0.';
+    if (t.price_cents > p.list_cents) return `Group price ${$(t.price_cents)} is above the single price ${$(p.list_cents)}.`;
+    if (t.price_cents < p.floor_cents) return `Group price ${$(t.price_cents)} is below your lowest price ${$(p.floor_cents)}.`;
+    const prev = p.tiers[i - 1];
+    if (prev && t.buyers <= prev.buyers) return 'Each group price needs more buyers than the one before.';
+    if (prev && t.price_cents >= prev.price_cents) return 'More buyers must mean a lower price.';
   }
+  return null;
+}
+
+// Insert (no id) or update a seller's product. Throws the rule message on bad input.
+export function saveProduct(seller: string, p: { id?: string; name: string; description: string; list_cents: number; floor_cents: number; tiers: Tier[] }): Product {
+  const err = productError(p);
+  if (err) throw new Error(err);
+  if (p.id) {
+    const cur = getProduct(p.id);
+    if (!cur || cur.seller !== seller) throw new Error('Not your product.');
+    db.prepare('update products set name = ?, description = ?, list_cents = ?, floor_cents = ?, tiers_json = ? where id = ?')
+      .run(p.name.trim(), p.description.trim(), p.list_cents, p.floor_cents, JSON.stringify(p.tiers), p.id);
+    return getProduct(p.id)!;
+  }
+  const base = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'product';
+  let id = base;
+  for (let n = 2; getProduct(id); n++) id = `${base}-${n}`;
+  db.prepare('insert into products (id, seller, name, description, list_cents, floor_cents, tiers_json) values (?, ?, ?, ?, ?, ?, ?)')
+    .run(id, seller.trim(), p.name.trim(), p.description.trim(), p.list_cents, p.floor_cents, JSON.stringify(p.tiers));
+  return getProduct(id)!;
 }

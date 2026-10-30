@@ -5,7 +5,7 @@
 import { FastMCP, UserError } from 'fastmcp';
 import { z } from 'zod';
 import type { Context } from 'hono';
-import { db, getProduct, getProducts, getDeal, getHold, startHold, authorizeHold, leaveDeal } from './lib/deals.ts';
+import { db, getProduct, getProducts, getDeal, getHold, getHolds, startHold, authorizeHold, leaveDeal, saveProduct, settleDeal, type Tier } from './lib/deals.ts';
 import { group } from './lib/grouping.ts';
 import { intake } from './lib/intake.ts';
 import type { ChatMessage } from './lib/llm.ts';
@@ -76,10 +76,14 @@ async function join({ product_id, max_usd, deadline }: { product_id: string; max
 function holdStatus(orderId: string) {
   const hold = mustGetHold(orderId);
   const deal = getDeal(hold.deal_id)!;
+  // If the agents negotiated at close: the price before and after (public; the transcript stays seller-side).
+  const neg = db.prepare("select data from events where deal_id = ? and type = 'NEGOTIATED' order by id desc limit 1").get(deal.id) as { data: string } | undefined;
+  const n = neg && JSON.parse(neg.data);
   return {
     hold: orderId, hold_status: hold.status, hold_amount: usd(hold.max_cents),
     deal: { deal_id: deal.id, product_id: deal.product_id, product: deal.product, status: deal.status, buyers: heldCount(deal.id),
-      target: deal.target, closes_at: deal.closes_at, ...(deal.price_cents && { price: usd(deal.price_cents) }) },
+      target: deal.target, closes_at: deal.closes_at, ...(deal.price_cents && { price: usd(deal.price_cents) }),
+      ...(n && n.to_cents < n.from_cents && { negotiated: { from: usd(n.from_cents), to: usd(n.to_cents) } }) },
   };
 }
 
@@ -178,6 +182,51 @@ app.post('/api/intake', c => api(c, async () => {
   if ('ask' in r || 'declined' in r) return r;
   const p = getProduct(r.productId)!;
   return { product_id: p.id, product: p.name, max_usd: r.maxCents / 100, list_usd: p.list_cents / 100, deadline: r.deadline };
+}));
+
+// Seller dashboard API. These expose floor prices and move money (Close now), so when SELLER_KEY is set every
+// call must send it as x-seller-key. Unset (local dev) = open.
+// ponytail: one shared key, no seller accounts; add per-seller logins when real sellers sign up.
+const sellerOk = (c: Context) => !process.env.SELLER_KEY || c.req.header('x-seller-key') === process.env.SELLER_KEY;
+const seller = (fn: (c: Context) => unknown) => async (c: Context) =>
+  sellerOk(c) ? api(c, () => fn(c)) : c.json({ error: 'Seller key required.' }, 401);
+const asProductInput = (b: Record<string, unknown>) => ({
+  name: String(b.name ?? ''), description: String(b.description ?? ''),
+  list_cents: Math.round(Number(b.list_usd) * 100), floor_cents: Math.round(Number(b.floor_usd) * 100),
+  tiers: (Array.isArray(b.tiers) ? b.tiers : []).map((t: { buyers?: unknown; price_usd?: unknown }) =>
+    ({ buyers: Number(t.buyers), price_cents: Math.round(Number(t.price_usd) * 100) })) as Tier[],
+});
+const userError = (fn: () => unknown) => { try { return fn(); } catch (e) { throw new UserError((e as Error).message); } };
+
+// Everything the dashboard shows for one seller, in one call (it polls).
+app.get('/api/seller', seller(c => {
+  const sellers = (db.prepare('select distinct seller from products order by seller').all() as { seller: string }[]).map(r => r.seller);
+  const who = c.req.query('seller') || sellers[0];
+  const products = getProducts().filter(p => p.seller === who);
+  const ids = new Set(products.map(p => p.id));
+  const deals = (db.prepare('select id from deals order by id desc').all() as { id: number }[])
+    .map(({ id }) => getDeal(id)!).filter(d => ids.has(d.product_id))
+    .map(d => ({ ...d, holds: getHolds(d.id), ends_in_ms: Math.max(0, (Date.parse(d.closes_at) - now().getTime()) / Number(process.env.CLOCK_SPEED ?? 1)) }));
+  const dealIds = deals.map(d => d.id);
+  const events = dealIds.length ? db.prepare(`select * from events where deal_id in (${dealIds.map(() => '?').join(',')}) order by id desc limit 200`).all(...dealIds) : [];
+  return { sellers, seller: who, products, deals, events };
+}));
+app.post('/api/seller/products', seller(async c => {
+  const b = await c.req.json().catch(() => ({}));
+  const who = String(b.seller ?? '').trim();
+  if (!who) throw new UserError('Seller name is required.');
+  return userError(() => saveProduct(who, asProductInput(b)));
+}));
+app.patch('/api/seller/products/:id', seller(async c => {
+  const b = await c.req.json().catch(() => ({}));
+  return userError(() => saveProduct(String(b.seller ?? ''), { id: c.req.param('id'), ...asProductInput(b) }));
+}));
+// Close a group now (demos): capture at the best tier reached, else release every hold.
+app.post('/api/seller/deals/:id/close', seller(async c => {
+  const deal = getDeal(Number(c.req.param('id')));
+  if (!deal) throw new UserError('No such group.');
+  if (deal.status !== 'OPEN') throw new UserError(`This group is already ${deal.status.toLowerCase()}.`);
+  return settleDeal(deal.id);
 }));
 
 // Stateless: no sessions to lose, so a server restart never strands a connected client.

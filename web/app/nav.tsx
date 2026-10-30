@@ -28,6 +28,7 @@ export function Nav() {
           <a href="/#how" className="hover:text-ink">How it works</a>
           <a href="/listed-product" className="hover:text-ink">Groups</a>
           <a href="/#claude" className="hover:text-ink">Use with Claude</a>
+          <a href="/seller" className="hover:text-ink">Sell</a>
         </div>
         <a href="/listed-product" className="btn press whitespace-nowrap px-4 py-1.5 text-sm">Join a group</a>
       </nav>

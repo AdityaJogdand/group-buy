@@ -7,7 +7,7 @@ import { photos, dollars, timeLeft, type Product } from "../groups";
 
 type HoldStatus = {
   hold_status: string; hold_amount: string;
-  deal: { deal_id: number; product_id: string; product: string; status: string; buyers: number; target: number; price?: string };
+  deal: { deal_id: number; product_id: string; product: string; status: string; buyers: number; target: number; price?: string; negotiated?: { from: string; to: string } };
 };
 
 const h1 = "display text-[clamp(3rem,6vw,5rem)]";
@@ -135,7 +135,8 @@ export function Status() {
     return <Message title="Hold not placed." body="The approval didn't go through, or the group already closed. Nothing was charged." />;
   if (!s) return <p className="text-xl" aria-live="polite">Checking your hold…</p>;
   // A bookmarked page outlives the open group: say how it ended.
-  if (s.hold_status === "CAPTURED") return <Message title="The group closed." body={`${s.deal.product}: you paid the group price, ${s.deal.price}.`} />;
+  if (s.hold_status === "CAPTURED") return <Message title="The group closed." body={`${s.deal.product}: you paid the group price, ${s.deal.price}.` +
+    (s.deal.negotiated ? ` Your agent negotiated it down from ${s.deal.negotiated.from} to ${s.deal.negotiated.to}.` : "")} />;
   if (s.hold_status !== "HELD" && s.hold_status !== "PENDING")
     return <Message title="Hold released." body={`${s.deal.product}: nothing was charged.`} />;
 

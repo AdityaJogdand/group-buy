@@ -21,6 +21,9 @@ export const photos: Record<string, { tag: string; file: string }> = {
   "design-workshop": { tag: "Workshop", file: "workshop" },
 };
 
+// Products a seller added from the dashboard have no stock photo: they show as "New" with their initial.
+export const look = (id: string) => photos[id] ?? { tag: "New", file: "" };
+
 export const dollars = (s: string) => Number(s.replace("$", ""));
 export function timeLeft(ms: number) {
   const m = Math.round(ms / 60_000), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60);
@@ -54,8 +57,9 @@ function Progress({ p }: { p: Product }) {
 
 // zoom={false} when a parent layer does the hover zoom (the tile scales its masked layer instead).
 const Photo = ({ p, sizes, zoom = true }: { p: Product; sizes: string; zoom?: boolean }) => (
-  <Image src={`/products/${photos[p.id].file}.jpg`} alt={p.name} fill sizes={sizes}
+  look(p.id).file ? <Image src={`/products/${look(p.id).file}.jpg`} alt={p.name} fill sizes={sizes}
     className={`object-cover ${zoom ? "transition-transform duration-700 ease-out group-hover:scale-[1.04]" : ""}`} />
+    : <span aria-hidden className="grid size-full place-items-center bg-gradient-to-br from-[#2a2a2a] to-[#0d0d0d] text-7xl font-medium text-white/25">{p.name[0]}</span>
 );
 
 // Group card. Every card shares one photo ratio so the grid stays even; the fullest group gets a badge.
@@ -75,7 +79,7 @@ function Tile({ p, onJoin, ratio, featured }: { p: Product; onJoin: () => void; 
           {featured ? "Filling fastest · " : ""}{deal ? `Ends in ${timeLeft(deal.ends_in_ms)}` : "New group"}
         </span>
         <div className="absolute inset-x-0 bottom-0 p-5">
-          <p className="text-xs font-medium uppercase tracking-[0.1em] text-white/60">{photos[p.id].tag}</p>
+          <p className="text-xs font-medium uppercase tracking-[0.1em] text-white/60">{look(p.id).tag}</p>
           <h3 className="mt-1 text-xl font-medium leading-tight tracking-tight">{p.name}</h3>
         </div>
       </div>
@@ -197,7 +201,7 @@ export function Groups() {
   useEffect(() => {
     // Refresh every 10 s so counts move while the page is open (and while the demo clock runs).
     const load = () => fetch("/api/products").then(r => (r.ok ? r.json() : Promise.reject()))
-      .then((ps: Product[]) => { setProducts(ps.filter(p => photos[p.id])); setFailed(false); })
+      .then((ps: Product[]) => { setProducts(ps); setFailed(false); })
       .catch(() => setFailed(true));
     load();
     const t = setInterval(load, 10_000);
@@ -211,9 +215,9 @@ export function Groups() {
   );
 
   // Featured: the group with the most buyers (ties: fewest still needed for the next price).
-  const shown = products.filter(p => tag === "All" || photos[p.id].tag === tag);
+  const shown = products.filter(p => tag === "All" || look(p.id).tag === tag);
   const ranked = [...shown].sort((a, b) => stats(b).buyers - stats(a).buyers);
-  const tags = ["All", ...new Set(products.map(p => photos[p.id].tag))];
+  const tags = ["All", ...new Set(products.map(p => look(p.id).tag))];
 
   return (
     <>
