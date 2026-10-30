@@ -3,3 +3,6 @@ node_modules
 spike/*.png
 groupbuy.db
 .DS_Store
+
+# Video build scratch (frames, ffmpeg download)
+brag-output/work/
