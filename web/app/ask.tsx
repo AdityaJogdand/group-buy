@@ -74,7 +74,7 @@ export function Ask() {
   return (
     <>
       {/* The wrapper's animated gradient shows as a thin ring around the button (shimmer.css). */}
-      <span className={`shimmer fixed bottom-5 right-5 z-40 rounded-full p-[2px] transition-[opacity,transform] duration-200 ${open ? "pointer-events-none translate-y-2 opacity-0" : ""}`}>
+      <span className={`shimmer fixed bottom-24 right-5 sm:bottom-5 z-40 rounded-full p-[2px] transition-[opacity,transform] duration-200 ${open ? "pointer-events-none translate-y-2 opacity-0" : ""}`}>
         <button type="button" onClick={() => setOpen(true)} aria-label="Ask the assistant" aria-expanded={open}
           className="btn press relative gap-2 py-3 pl-4 pr-5">
           <Spark /> Ask AI
@@ -82,8 +82,8 @@ export function Ask() {
       </span>
 
       <aside aria-label="Group Buy assistant" aria-hidden={!open} inert={!open}
-        className={`fixed inset-y-0 right-0 z-50 flex w-full flex-col bg-[#141414] shadow-[-24px_0_60px_rgba(0,0,0,0.6),inset_1px_0_0_var(--line)] transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] sm:w-[420px] ${
-          open ? "translate-x-0" : "translate-x-full"}`}>
+        className={`fixed inset-y-0 right-0 z-50 flex w-full flex-col bg-panel shadow-[inset_1px_0_0_var(--line)] transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] sm:w-[420px] ${
+          open ? "translate-x-0 shadow-[-24px_0_60px_rgba(0,0,0,0.35),inset_1px_0_0_var(--line)]" : "translate-x-full"}`}>
         <header className="flex items-center justify-between border-b border-line px-5 py-4">
           <p className="flex items-center gap-2 font-medium"><Spark className="size-4" /> Group Buy assistant</p>
           <div className="flex items-center gap-1">
@@ -111,7 +111,7 @@ export function Ask() {
 
           <div className="grid gap-5 text-[0.9375rem] leading-relaxed">
             {msgs.map((m, i) => m.role === "user"
-              ? <p key={i} className="ml-auto max-w-[85%] rounded-2xl bg-[#2a2a2a] px-4 py-2.5">{m.content}</p>
+              ? <p key={i} className="ml-auto max-w-[85%] rounded-2xl bg-bubble px-4 py-2.5">{m.content}</p>
               : <div key={i} className="flex gap-3"><Spark className="mt-1 size-4 shrink-0" /><p>{m.content}</p></div>)}
             {busy && !parsed && <div className="flex gap-3 text-muted"><Spark className="mt-1 size-4 shrink-0 animate-pulse" /><p>Finding your group…</p></div>}
 
@@ -140,7 +140,7 @@ export function Ask() {
 
         {/* Composer: Enter sends, Shift+Enter for a new line. */}
         <form onSubmit={e => { e.preventDefault(); send(text); }} className="p-4">
-          <div className="rounded-2xl bg-[#1f1f1f] p-3 shadow-[inset_0_0_0_1px_var(--line)] focus-within:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.3)]">
+          <div className="rounded-2xl bg-field p-3 shadow-[inset_0_0_0_1px_var(--line)] focus-within:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ink)_30%,transparent)]">
             <label htmlFor="ask" className="sr-only">Message the assistant</label>
             <textarea id="ask" ref={input} value={text} rows={2} maxLength={500} placeholder={msgs.length ? "Reply…" : "e.g. headphones, up to $320"}
               onChange={e => setText(e.target.value)}

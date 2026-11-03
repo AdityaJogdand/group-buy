@@ -9,6 +9,34 @@
   --ink: #f2f2f2;
   --muted: #8a8a8a;
   --line: rgba(255, 255, 255, 0.09);
+  --accent: #7aa7ff;   /* arcs and active states */
+  --save: #34d399;     /* green only for savings and paid */
+  --dot: #1f1f1f;
+  --panel: #141414; --bubble: #2a2a2a; --field: #1f1f1f;
+  --glass: rgba(0, 0, 0, 0.6);
+  --card-a: #121212; --card-b: #0a0a0a;
+  --slab-a: #262626; --slab-b: #0d0d0d; --slab-c: #050505;
+  --fade-a: #5e5e5e; --fade-b: #a8a8a8; --fade-c: #fff;
+  --lift: 0 40px 60px -20px rgba(0, 0, 0, 0.9);
+  --glass-bg: rgba(255, 255, 255, 0.08); --glass-edge: rgba(255, 255, 255, 0.16); --glass-drop: rgba(0, 0, 0, 0.45);
+}
+
+/* Light theme: tokens swap, and Tailwind's white/black swap with them, so every white/10, text-black etc. inverts too.
+   Set by the script in layout.tsx (saved choice, else the system setting). */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-white: #000; --color-black: #fff;
+  --bg: #ffffff; --surface: #ffffff; --raised: #f2f2f2; --ink: #111111; --muted: #6b6b6b;
+  --line: rgba(0, 0, 0, 0.1);
+  --accent: #2b59d9; --save: #059669;
+  --dot: #e5e5e5;
+  --panel: #ffffff; --bubble: #e9e9e9; --field: #f2f2f2;
+  --glass: rgba(255, 255, 255, 0.7);
+  --card-a: #ffffff; --card-b: #f7f7f7;
+  --slab-a: #ffffff; --slab-b: #f4f4f4; --slab-c: #ececec;
+  --fade-a: #a3a3a3; --fade-b: #5a5a5a; --fade-c: #000;
+  --lift: 0 30px 50px -24px rgba(0, 0, 0, 0.25);
+  --glass-bg: rgba(255, 255, 255, 0.5); --glass-edge: rgba(0, 0, 0, 0.1); --glass-drop: rgba(0, 0, 0, 0.18);
 }
 
 @theme inline {
@@ -18,6 +46,11 @@
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-save: var(--save);
+  --color-panel: var(--panel);
+  --color-bubble: var(--bubble);
+  --color-field: var(--field);
 }
 
 html { scroll-behavior: smooth; scroll-padding-top: 4rem; }
@@ -29,40 +62,77 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 /* In the base layer so a utility (outline-none) can opt a field out; unlayered CSS would always win. */
-@layer base { :focus-visible { outline: 2px solid rgba(255, 255, 255, 0.7); outline-offset: 2px; } }
+@layer base { :focus-visible { outline: 2px solid color-mix(in srgb, var(--ink) 70%, transparent); outline-offset: 2px; } }
 
 /* Type: tracking tightens as size grows; body stays near 0. */
 .display { font-weight: 500; letter-spacing: -0.035em; line-height: 1.05; }
 .container-x { margin-inline: auto; max-width: 1120px; padding-inline: 1.5rem; }
 
 /* The one action style: a white pill. */
-.btn { display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 999px; background: var(--ink); color: #000; font-weight: 500; }
-.btn-ghost { display: inline-flex; align-items: center; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); font-weight: 500; }
+.btn { display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 500; }
+.btn-ghost { display: inline-flex; align-items: center; border-radius: 999px; border: 1px solid var(--line); background: color-mix(in srgb, var(--ink) 5%, transparent); font-weight: 500; }
 
 /* Small section tag: icon + uppercase label in a hairline pill. */
 .tag { display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 0.3rem 0.7rem; font-size: 0.6875rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 
 /* Card: near-black, hairline border lit from the top edge. */
 .card {
-  position: relative; border-radius: 18px; background: linear-gradient(180deg, #121212, #0a0a0a);
-  box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  position: relative; border-radius: 18px; background: linear-gradient(180deg, var(--card-a), var(--card-b));
+  box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 0 color-mix(in srgb, var(--color-white) 7%, transparent);
 }
 
+/* The hero card: surface fading to slightly lighter, a lit inner edge, two shadows (tight + diffuse), 3% noise for body. */
+.morph-card {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E"),
+    linear-gradient(160deg, color-mix(in srgb, var(--surface) 88%, var(--color-white)), var(--surface));
+  box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 0 color-mix(in srgb, var(--color-white) 10%, transparent), 0 2px 4px rgba(0, 0, 0, 0.18), 0 28px 56px -14px rgba(0, 0, 0, 0.5);
+}
+:root[data-theme="light"] .morph-card { box-shadow: inset 0 0 0 1px var(--line), 0 2px 4px rgba(0, 0, 0, 0.06), 0 28px 56px -16px rgba(0, 0, 0, 0.22); }
+
 /* Titles fade from grey into white, left to right: the first words recede, the point lands. */
-.text-fade { background: linear-gradient(90deg, #5e5e5e 0%, #a8a8a8 30%, #fff 62%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.text-fade { background: linear-gradient(90deg, var(--fade-a) 0%, var(--fade-b) 30%, var(--fade-c) 62%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 /* Glossy slab: a card with thickness, used for the tilted stat stack. */
 .slab {
-  border-radius: 22px; background: linear-gradient(150deg, #262626 0%, #0d0d0d 55%, #050505 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 40px 60px -20px rgba(0, 0, 0, 0.9);
+  border-radius: 22px; background: linear-gradient(150deg, var(--slab-a) 0%, var(--slab-b) 55%, var(--slab-c) 100%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-white) 22%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--color-white) 8%, transparent), var(--lift);
 }
+
+/* Liquid glass: clear body that blurs and bends what is behind it, a bright lit rim, and a soft sheen across the top. */
+.glass {
+  isolation: isolate; background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(16px) saturate(190%); backdrop-filter: blur(16px) saturate(190%);
+  backdrop-filter: url(#liquid-glass) blur(10px) saturate(190%); /* Chromium only; elsewhere the line above stands */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(255, 255, 255, 0.1), inset 0 0 0 1px var(--glass-edge), 0 14px 40px var(--glass-drop);
+}
+.glass::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0) 62%, rgba(255, 255, 255, 0.12)); }
+
+/* A surface in the opposite theme: on the dark page it is light glass, on the light page dark glass. Tokens and Tailwind's
+   white/black swap with it, so everything inside (bg-raised, text-muted, bg-white/10 ...) just works. */
+.flip { color: var(--ink); }
+:root:not([data-theme="light"]) .flip {
+  --color-white: #000; --color-black: #fff;
+  --bg: #fff; --surface: #fff; --raised: rgba(0, 0, 0, 0.05); --panel: rgba(255, 255, 255, 0.62); --ink: #111; --muted: #5f5f5f;
+  --line: rgba(0, 0, 0, 0.1); --accent: #2b59d9; --save: #059669;
+  --glass-bg: rgba(250, 250, 250, 0.9); --glass-edge: rgba(0, 0, 0, 0.06); --glass-drop: rgba(0, 0, 0, 0.35);
+}
+:root[data-theme="light"] .flip {
+  --color-white: #fff; --color-black: #000;
+  --bg: #000; --surface: #0c0c0c; --raised: rgba(255, 255, 255, 0.07); --panel: rgba(255, 255, 255, 0.06); --ink: #f2f2f2; --muted: #9a9a9a;
+  --line: rgba(255, 255, 255, 0.12); --accent: #7aa7ff; --save: #34d399;
+  --glass-bg: rgba(6, 6, 6, 0.97); --glass-edge: rgba(255, 255, 255, 0.16); --glass-drop: rgba(0, 0, 0, 0.4);
+}
+
+/* On the light page the flipped glass is black, so tone the white sheen down. */
+:root[data-theme="light"] .flip.glass::before { opacity: 0.3; }
 
 /* Feedback on press, instantly. */
 .press { transition: transform 100ms ease-out, opacity 150ms ease-out, background-color 150ms ease-out; }
 .press:active:not(:disabled) { transform: scale(0.96); }
 
 /* Frosted chrome: content scrolls under the nav. */
-.material { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%); }
+.material { background: var(--glass); backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%); }
 
 /* Price change: the new number rises into place. */
 @keyframes price-in { from { opacity: 0; transform: translateY(0.12em); } to { opacity: 1; transform: none; } }
@@ -85,5 +155,5 @@ body {
   .press:active:not(:disabled) { transform: none; }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .material { background: #000; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .material { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
