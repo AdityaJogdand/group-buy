@@ -30,7 +30,7 @@ Judging: 5 equal criteria (Tech, Design, Impact, Innovation, Presentation); ties
 - [x] Close deal: capture every hold at the group price (`final_capture: true`), idempotent
 - [x] Fail / expire / leave: void
 - [x] Drop-out: buyers below the final price voided, rest captured
-- [ ] Webhook endpoint + signature check (needs a public URL → do with the Render deploy)
+- [x] Webhook endpoint + signature check (Nov 4): `POST /paypal/webhook`, verified via PayPal, applied once per event (`npm run test:webhook` → PASS)
 - [x] Simulated clock (3 days → 60 s): `lib/clock.ts`, CLOCK_SPEED=4320 (Oct 19: `npm run test:clock` → PASS)
 - [x] Simulated buyers: `scripts/buyers.ts` approves through the real PayPal page (Oct 18: `npm run test:money` → PASS, 10 holds)
 - [x] Auto-close (Oct 27): at closes_at, capture at the best tier the held buyers reached, else void all (`settleDue` in `lib/deals.ts`; `npm run test:autoclose` → PASS)

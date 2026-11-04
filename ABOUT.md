@@ -16,7 +16,7 @@ Built for the PayPal AI Hackathon (deadline Nov 12, 2026; hosted demo Nov 4).
 1. **Intake agent**: turns free text ("a UX course, under $160, before December") into `{product, max_price, deadline}`; asks one follow-up if unclear.
 2. **Grouping** (plain code, no model): puts the request into an open deal for that product, or opens one ("18 of 20, you'd save $40").
 3. **Negotiation agents**: at close, if some holders would be released at the earned tier price, the buyers' agent argues for a lower price that keeps them in and the seller's agent weighs revenue against its secret floor. A code referee enforces floor ≤ price ≤ earned tier, monotonic moves, max 4 rounds; the transcript is shown on the seller dashboard.
-4. **PayPal payments**: Orders v2 `AUTHORIZE` on join → capture at the group price on close (`final_capture`) → void on failure or leave. (PayPal webhooks are not wired yet; the return page authorizes the hold.)
+4. **PayPal payments**: Orders v2 `AUTHORIZE` on join → capture at the group price on close (`final_capture`) → void on failure or leave. Webhooks are signature-verified (PayPal's verify API) and applied once per event: an approved order is held even if the buyer never returns.
 
 ## Deal rules (enforced in code, never by the model)
 1. A buyer's hold is their max price; the final charge is never above it.

@@ -44,6 +44,8 @@ Then ask Claude for what you want. Tools: `find_deal`, `join_deal`, `deal_status
 
 Every authorize, capture and void carries a `PayPal-Request-Id` built from PayPal's own IDs, so retries after a crash never charge twice.
 
+**Webhooks** (`POST /paypal/webhook`): every event is verified with PayPal's signature check before it's applied, and each event id is applied once. `CHECKOUT.ORDER.APPROVED` places the hold even if the buyer never returns to the site; `PAYMENT.AUTHORIZATION.VOIDED` releases a hold voided outside the app; `PAYMENT.CAPTURE.COMPLETED` / `DENIED` confirm or flag a charge. Every event shows in the seller's activity log.
+
 ### The AI
 
 - **Intake agent:** turns free text into `{product, max, deadline}` with a strict JSON schema, asking one follow-up when unsure. Powers **Ask AI**.
@@ -61,7 +63,8 @@ Model: `openai/gpt-oss-120b` on Groq (any OpenAI-compatible endpoint works).
 web/  Next.js 16 (App Router), Tailwind, AG Grid  ──/api/*──►  server.ts  FastMCP + Hono (Node 24)
       landing · /listed-product · /seller · /joined                ├─ /mcp            MCP tools
                                                                     ├─ /api/*          website + seller API
-                                                                    └─ /paypal/return  approval return
+                                                                    ├─ /paypal/return  approval return
+                                                                    └─ /paypal/webhook verified PayPal events
 lib/deals.ts      money path: holds, capture, void, settle, product rules (SQLite, node:sqlite)
 lib/negotiate.ts  pool vs seller agents + code referee
 lib/intake.ts     free text → request          lib/grouping.ts  join an open deal or open one
@@ -89,6 +92,7 @@ All money tests run against the real PayPal sandbox; simulated buyers approve th
 | `npm run test:clock` | expired group voids every hold |
 | `npm run test:negotiate` | referee rules, plus a live agent negotiation |
 | `npm run test:negotiate:paypal` | agents agree a price; PayPal captures every buyer at it |
+| `npm run test:webhook` | buyer approves and never returns: the webhook places the hold; void/capture events; forged signatures rejected |
 | `npm run test:mcp` | MCP tools and website API end to end |
 | `npm run test:seller` | product rules, floor stays private, edits never change open groups |
 | `npm run test:intake` / `test:grouping` | free-text parsing; grouping |
@@ -96,7 +100,6 @@ All money tests run against the real PayPal sandbox; simulated buyers approve th
 ## Limits
 
 - Sandbox only; no buyer accounts (a hold is labelled with the name the buyer types).
-- PayPal webhooks are not wired yet; the return page authorizes the hold.
 - The free host wipes the database on redeploy; products reseed on boot.
 - Seller dashboard uses one shared key (`SELLER_KEY`), not per-seller logins.
 

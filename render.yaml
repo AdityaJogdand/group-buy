@@ -20,6 +20,9 @@ services:
         sync: false
       - key: PAYPAL_CLIENT_SECRET
         sync: false
+      # From developer.paypal.com → your app → Webhooks, after adding https://<this service>/paypal/webhook
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
       - key: LLM_BASE_URL
         sync: false
       - key: LLM_MODEL

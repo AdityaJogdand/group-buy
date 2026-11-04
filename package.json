@@ -9,6 +9,7 @@
     "test:seller": "DB_PATH=:memory: node --no-warnings scripts/test-seller.ts",
     "test:negotiate": "node --no-warnings --env-file=.env scripts/test-negotiate.ts",
     "test:negotiate:paypal": "DB_PATH=:memory: node --no-warnings --env-file=.env scripts/test-negotiate-paypal.ts",
+    "test:webhook": "DB_PATH=:memory: node --no-warnings --env-file=.env scripts/test-webhook.ts",
     "test:intake": "node --no-warnings --env-file=.env scripts/test-intake.ts",
     "chat": "DB_PATH=:memory: node --no-warnings --env-file=.env scripts/chat-intake.ts",
     "test:grouping": "DB_PATH=:memory: node --no-warnings scripts/test-grouping.ts",

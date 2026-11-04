@@ -8,6 +8,7 @@ import type { Context } from 'hono';
 import { db, getProduct, getProducts, getDeal, getHold, getHolds, startHold, authorizeHold, leaveDeal, saveProduct, settleDeal, type Tier } from './lib/deals.ts';
 import { group } from './lib/grouping.ts';
 import { intake } from './lib/intake.ts';
+import { handleWebhook } from './lib/webhook.ts';
 import type { ChatMessage } from './lib/llm.ts';
 import { now, startClock } from './lib/clock.ts';
 
@@ -145,6 +146,14 @@ app.get('/paypal/return/:via?', async c => {
   } catch {
     return web ? c.redirect(`${WEB_URL}/joined?error=1`) : c.html(page('Hold not placed', 'This approval link is not valid or the deal has closed.'), 400);
   }
+});
+
+// PayPal webhooks: signature-verified, applied once per event id (lib/webhook.ts).
+app.post('/paypal/webhook', async c => {
+  const h: Record<string, string | undefined> = {};
+  c.req.raw.headers.forEach((v, k) => { h[k.toLowerCase()] = v; });
+  const r = await handleWebhook(await c.req.text(), h);
+  return c.json(r.body, r.status as 200);
 });
 
 // Website API. The site proxies /api/* here (web/next.config.ts), so no CORS.

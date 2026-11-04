@@ -36,6 +36,7 @@ db.exec(`
     order_id text unique, authorization_id text, capture_id text, status text not null default 'PENDING');
   create table if not exists events (
     id integer primary key, deal_id int, at text not null default (datetime('now')), type text not null, data text);
+  create table if not exists webhook_events (id text primary key, at text not null default (datetime('now')));
 `);
 // Deals copy their tiers at open (like list and floor), so seller edits never change a deal people joined.
 // Added after launch: older databases get the column here; their deals fall back to the product's tiers.
@@ -84,7 +85,7 @@ export const getDeal = (id: number) => db.prepare(
 ).get(id) as Deal | undefined;
 export const getHolds = (dealId: number) =>
   db.prepare('select * from holds where deal_id = ? order by id').all(dealId) as Hold[];
-export const getHold = (where: 'id' | 'order_id', value: number | string) =>
+export const getHold = (where: 'id' | 'order_id' | 'authorization_id' | 'capture_id', value: number | string) =>
   db.prepare(`select * from holds where ${where} = ?`).get(value) as Hold | undefined;
 const setHold = (id: number, fields: Partial<Hold>) => {
   const keys = Object.keys(fields);
@@ -288,4 +289,47 @@ export function saveProduct(seller: string, p: { id?: string; name: string; desc
   db.prepare('insert into products (id, seller, name, description, list_cents, floor_cents, tiers_json) values (?, ?, ?, ?, ?, ?, ?)')
     .run(id, seller.trim(), p.name.trim(), p.description.trim(), p.list_cents, p.floor_cents, JSON.stringify(p.tiers));
   return getProduct(id)!;
+}
+
+// ---- PayPal webhooks (verified in lib/webhook.ts before they get here) ----
+// Each event id is applied once (PayPal retries and may resend). Every event lands in the deal's activity log.
+// What they change:
+//   CHECKOUT.ORDER.APPROVED       place the hold even if the buyer never came back to our return page
+//   PAYMENT.AUTHORIZATION.VOIDED  a held hold was voided outside this app (or expired): it no longer counts
+//   PAYMENT.CAPTURE.COMPLETED     confirm the charge (also settles a capture that came back PENDING or failed to record)
+//   PAYMENT.CAPTURE.DENIED        flag the charge as failed so closeDeal's retry picks it up
+// Anything else (refunds, reversals, pending) is logged only.
+export type PayPalEvent = { id: string; event_type: string; resource?: any };
+export async function applyPaymentEvent(e: PayPalEvent): Promise<{ applied: boolean; holdId?: number }> {
+  if (db.prepare('select 1 from webhook_events where id = ?').get(e.id)) return { applied: false };
+  const r = e.resource ?? {};
+  const rel = r.supplementary_data?.related_ids ?? {};
+  const hold = e.event_type === 'CHECKOUT.ORDER.APPROVED' ? getHold('order_id', r.id)
+    : e.event_type.startsWith('PAYMENT.AUTHORIZATION.') ? getHold('authorization_id', r.id) ?? getHold('order_id', rel.order_id ?? '')
+    : e.event_type.startsWith('PAYMENT.CAPTURE.') ? getHold('capture_id', r.id) ?? getHold('authorization_id', rel.authorization_id ?? '')
+    : undefined;
+
+  if (hold) switch (e.event_type) {
+    case 'CHECKOUT.ORDER.APPROVED':
+      if (hold.status === 'PENDING' && mustGetDeal(hold.deal_id).status === 'OPEN') await authorizeHold(hold.order_id);
+      break;
+    case 'PAYMENT.AUTHORIZATION.VOIDED':
+      if (hold.status === 'HELD') setHold(hold.id, { status: r.status === 'EXPIRED' ? 'EXPIRED' : 'VOIDED' });
+      break;
+    case 'PAYMENT.CAPTURE.COMPLETED':
+      if (hold.status !== 'CAPTURED') {
+        setHold(hold.id, { status: 'CAPTURED', capture_id: r.id });
+        // The last open capture landing completes a deal that was stuck CLOSING.
+        const deal = mustGetDeal(hold.deal_id);
+        if (deal.status === 'CLOSING' && !getHolds(deal.id).some(h => h.status === 'CAPTURE_FAILED' || (h.status === 'HELD' && h.max_cents >= (deal.price_cents ?? Infinity))))
+          db.prepare("update deals set status = 'CAPTURED' where id = ?").run(deal.id);
+      }
+      break;
+    case 'PAYMENT.CAPTURE.DENIED':
+      if (hold.status !== 'CAPTURE_FAILED') setHold(hold.id, { status: 'CAPTURE_FAILED' });
+      break;
+  }
+  db.prepare('insert or ignore into webhook_events (id) values (?)').run(e.id);
+  log(hold?.deal_id ?? 0, `PAYPAL_${e.event_type}`, { eventId: e.id, resourceId: r.id, status: r.status, holdId: hold?.id });
+  return { applied: true, holdId: hold?.id };
 }
