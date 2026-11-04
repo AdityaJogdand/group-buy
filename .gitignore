@@ -4,5 +4,6 @@ spike/*.png
 groupbuy.db
 .DS_Store
 
-# Video build scratch (frames, ffmpeg download)
-brag-output/work/
+# Video renders and their scratch (frames, audio, ffmpeg download): kept locally, not in git
+brag-output/
+brag-output-*/
