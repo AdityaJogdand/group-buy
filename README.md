@@ -9,7 +9,7 @@ Built for the PayPal AI Hackathon 2026.
 - **Live demo:** https://group-buy-web.onrender.com
 - **Seller dashboard:** https://group-buy-web.onrender.com/seller
 - **MCP endpoint (for Claude):** `https://group-buy-api-4ai9.onrender.com/mcp`
-- **Video:** _add YouTube link_
+- **Video:** https://youtu.be/-ivc9QVq4es
 
 > Sandbox only. No real money moves. The free hosting sleeps after 15 minutes idle, so the first request can take up to a minute.
 
