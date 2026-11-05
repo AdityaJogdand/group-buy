@@ -3,6 +3,7 @@
 // and the Join form: name + max → /api/join → PayPal approval → back to /joined.
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { ShareButton } from "./shared";
 
 export type Product = {
   id: string; name: string; seller: string; list_price: string;
@@ -98,7 +99,10 @@ function Featured({ p, onJoin }: { p: Product; onJoin: () => void }) {
         <div className="mt-auto pt-8">
           <Progress p={p} />
           <p className="mt-3 text-sm text-muted">{buyers} of {seats} joined · {next ? `${next.buyers - buyers} more unlock $${next.price}` : "best price unlocked"}</p>
-          <button type="button" onClick={onJoin} className="btn press mt-6 px-6 py-3">{deal ? "Join this group" : "Start a group"}</button>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <button type="button" onClick={onJoin} className="btn press px-6 py-3">{deal ? "Join this group" : "Start a group"}</button>
+            <ShareButton id={p.id} name={p.name} className="btn-ghost press px-5 py-3" />
+          </div>
         </div>
       </div>
     </article>
@@ -236,6 +240,7 @@ export function Groups() {
   const [joining, setJoining] = useState<Product | null>(null);
   const [tag, setTag] = useState("All");
   const rail = useRef<HTMLDivElement>(null);
+  const deepLinked = useRef(false);
 
   useEffect(() => {
     // Refresh every 10 s so counts move while the page is open (and while the demo clock runs).
@@ -246,6 +251,15 @@ export function Groups() {
     const t = setInterval(load, 10_000);
     return () => clearInterval(t);
   }, []);
+
+  // A shared link (/?join=<product id>) opens that group's join dialog, once.
+  useEffect(() => {
+    if (!products || deepLinked.current) return;
+    deepLinked.current = true;
+    const id = new URLSearchParams(location.search).get("join");
+    const p = products.find(x => x.id === id);
+    if (p) { setJoining(p); document.getElementById("groups")?.scrollIntoView(); }
+  }, [products]);
 
   if (!products) return (
     <p className="mt-12 text-xl text-muted" aria-live="polite">

@@ -154,6 +154,13 @@ const api = async (c: Context, fn: () => unknown) => {
 };
 app.get('/api/products', c => api(c, () => catalog()));
 app.get('/api/holds/:hold', c => api(c, () => holdStatus(c.req.param('hold'))));
+// Public proof for a group: every money event with its PayPal authorization/capture ids. Order ids (the buyers' tokens) are never logged.
+app.get('/api/deals/:id/events', c => api(c, () => {
+  const id = Number(c.req.param('id'));
+  if (!getDeal(id)) throw new UserError('No such group.');
+  return (db.prepare('select at, type, data from events where deal_id = ? order by id').all(id) as { at: string; type: string; data: string | null }[])
+    .map(e => ({ at: e.at, type: e.type, data: JSON.parse(e.data ?? '{}') }));
+}));
 app.post('/api/join', c => api(c, async () => {
   const body = await c.req.json().catch(() => ({}));
   // ponytail: the buyer's name is just a label on the hold; add accounts when sellers need verified buyers.

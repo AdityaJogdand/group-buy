@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { photos, dollars, timeLeft, type Product } from "../groups";
+import { MoneyChip, ShareButton } from "../shared";
 
 type HoldStatus = {
   hold_status: string; hold_amount: string;
@@ -13,23 +14,17 @@ type HoldStatus = {
 const h1 = "display text-[clamp(3rem,6vw,5rem)]";
 const primary = "btn press px-7 py-3.5 text-lg";
 
-function Message({ title, body }: { title: string; body: string }) {
+function Message({ title, body, chip, dealId }: { title: string; body: string; chip?: string; dealId?: number }) {
   return (
     <div className="max-w-2xl">
-      <h1 className={h1}>{title}</h1>
+      {chip && <MoneyChip status={chip} />}
+      <h1 className={`${h1} ${chip ? "mt-6" : ""}`}>{title}</h1>
       <p className="mt-6 text-2xl leading-snug text-muted">{body}</p>
-      <a href="/#groups" className={`${primary} mt-10`}>Back to groups</a>
+      <div className="mt-10 flex flex-wrap items-center gap-3">
+        <a href="/#groups" className={primary}>Back to groups</a>
+        {dealId && <a href={`/audit/${dealId}`} className="btn-ghost press px-6 py-3.5 text-lg">See the record</a>}
+      </div>
     </div>
-  );
-}
-
-function CopyLink() {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button type="button" aria-live="polite" className="btn-ghost press px-6 py-3.5 text-lg"
-      onClick={() => navigator.clipboard?.writeText(location.href).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600); }, () => {})}>
-      {copied ? "Link copied ✓" : "Copy link"}
-    </button>
   );
 }
 
@@ -135,15 +130,23 @@ export function Status() {
     return <Message title="Hold not placed." body="The approval didn't go through, or the group already closed. Nothing was charged." />;
   if (!s) return <p className="text-xl" aria-live="polite">Checking your hold…</p>;
   // A bookmarked page outlives the open group: say how it ended.
-  if (s.hold_status === "CAPTURED") return <Message title="The group closed." body={`${s.deal.product}: you paid the group price, ${s.deal.price}.`} />;
+  const dealId = s.deal.deal_id;
+  if (s.hold_status === "CAPTURED") {
+    const saved = p && s.deal.price ? dollars(p.list_price) - dollars(s.deal.price) : 0;
+    return <Message chip="CAPTURED" dealId={dealId} title={`Charged ${s.deal.price}.`}
+      body={`${s.deal.product}: the group price, once.${saved > 0 ? ` You saved $${saved} against the solo price.` : ""}`} />;
+  }
   if (s.hold_status !== "HELD" && s.hold_status !== "PENDING")
-    return <Message title="Hold released." body={`${s.deal.product}: nothing was charged.`} />;
+    return <Message chip={s.hold_status} dealId={dealId} title={s.hold_status === "CAPTURE_FAILED" ? "Payment pending." : "You paid nothing."}
+      body={s.hold_status === "CAPTURE_FAILED" ? `${s.deal.product}: PayPal could not take the payment yet. We retry it.`
+        : `${s.deal.product}: the group didn't happen, so your ${s.hold_amount} hold was released.`} />;
 
   return (
     <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-20 [&>*]:min-w-0">
       <div>
         <span aria-hidden className="pop-in grid size-16 place-items-center rounded-full bg-ink text-3xl text-black">✓</span>
-        <h1 className={`${h1} mt-8`}>You&apos;re in.</h1>
+        <div className="mt-8"><MoneyChip status={s.hold_status} /></div>
+        <h1 className={`${h1} mt-6`}>You&apos;re in.</h1>
         <p className="mt-6 max-w-xl text-2xl leading-snug text-muted">
           PayPal is holding <b className="text-ink">{s.hold_amount}</b> for {s.deal.product}. At the deadline you pay the group price, never more.
           If the group doesn&apos;t fill, the hold is released and you pay nothing.
@@ -151,7 +154,8 @@ export function Status() {
         <p className="mt-6 max-w-xl text-lg text-muted">Share the group: every buyer who joins lowers the price for you too.</p>
         <div className="mt-10 flex flex-wrap items-center gap-3">
           <a href="/#groups" className={primary}>Back to groups</a>
-          <CopyLink />
+          <ShareButton id={s.deal.product_id} name={s.deal.product} className="btn-ghost press px-6 py-3.5 text-lg" />
+          <a href={`/audit/${dealId}`} className="press px-3 py-3.5 text-lg text-muted underline underline-offset-4 hover:text-ink">See the record</a>
         </div>
       </div>
       <Receipt s={s} p={p} />
